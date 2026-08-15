@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统架构 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <span class="current">系统架构</span>
+</div>
+
+<div class="container">
+  <h1>系统架构设计</h1>
+  <p class="subtitle">任意设备控制任意设备 · 全部通过客户端 MCP Server · 多通道统一记忆</p>
+
+  <!-- ===== 核心模型 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 核心模型：任意设备 → 任意设备</h2>
+    <div class="highlight">
+      <h4>自建客户端：两个功能模块</h4>
+      <p>
+        <b>功能 1 — 与 Gateway 沟通（发送命令）：</b>客户端通过 WebSocket 连接 OpenClaw Gateway，提供聊天界面、设备管理、远程桌面。用户在客户端里的操作（聊天、点按钮）走的是 Gateway 的 API。<br><br>
+        <b>功能 2 — 暴露本机能力（MCP Server）：</b>客户端启动后自动注册到 Gateway 作为 MCP Server。<b>AI 或其他设备要操作这台机器时，Gateway 调用它暴露的 MCP Tools</b>（file_list、exec、screenshot 等）。<br><br>
+        <b>所有被控设备都装客户端。</b>不装客户端的设备不纳入控制范围。
+      </p>
+    </div>
+
+    <div class="diagram">┌─────────────────────────────────────────────────────────────────────────────┐
+│                    <span class="hi">发起方 — 任意设备 / 任意通道</span>                             │
+│                                                                             │
+│   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
+│   │ <span class="hi">手机客户端</span>│  │ <span class="hi">电脑客户端</span>│  │   飞书   │  │   微信   │  │ Telegram │     │
+│   │(MCP+UI) │  │(MCP+UI) │  │          │  │          │  │          │     │
+│   └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘     │
+└────────┼─────────────┼─────────────┼─────────────┼─────────────┼────────────┘
+         ▼             ▼             ▼             ▼             ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    <span class="gr">OpenClaw Gateway（MCP Host）</span>                             │
+│                                                                             │
+│  AI Agent · 通道路由 · 记忆系统 · MCP Host                                  │
+│                                                                             │
+│  <span class="dim">── 设备注册表（全部通过客户端 MCP Server）──</span>                                │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  "home-pc"    → MCP SSE  <span class="gr">在线</span>   <span class="dim">[file,exec,screen,input]</span>          │    │
+│  │  "cloud-svr"  → MCP SSE  <span class="gr">在线</span>   <span class="dim">[file,exec,sysinfo]</span>              │    │
+│  │  "my-phone"   → MCP SSE  <span class="gr">在线</span>   <span class="dim">[file,exec,screenshot]</span>           │    │
+│  │  "work-pc"    → MCP SSE  <span class="dim">离线</span>   <span class="dim">[—]</span>                             │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└───────────┬───────────────────────────────────────────────────────────────┘
+            │
+            ▼
+   ┌────────┴────────┐          ┌──────────────────┐
+   ▼                 ▼          ▼                  ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│ home-pc  │  │ cloud-svr│  │ my-phone │  │ work-pc  │
+│<span class="gr">客户端</span>    │  │<span class="gr">客户端</span>    │  │<span class="gr">客户端</span>    │  │<span class="dim">离线</span>      │
+└──────────┘  └──────────┘  └──────────┘  └──────────┘</div>
+  </div>
+
+  <!-- ===== 使用场景 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--pink)"></span> 典型场景</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>📱 手机找电脑文件</h4>
+        <p>手机 App → Gateway → home-pc<br>"找桌面上的 PDF" → <code>file_list("home-pc", "C:\\Desktop", "*.pdf")</code></p>
+      </div>
+      <div class="card">
+        <h4>💻 电脑查服务器日志</h4>
+        <p>电脑 App → Gateway → cloud-svr<br>"看 nginx 最近 50 行日志" → <code>exec("cloud-svr", "tail -50 /var/log/nginx.log")</code></p>
+      </div>
+      <div class="card">
+        <h4>💬 微信开关游戏服务器</h4>
+        <p>微信 → Gateway AI → game-svr（客户端）<br>"把游戏服务器关了" → <code>exec("game-svr", "systemctl stop minecraft")</code></p>
+      </div>
+      <div class="card">
+        <h4>📱 电脑看手机屏幕</h4>
+        <p>电脑客户端 → Gateway → my-phone（客户端）<br><code>screenshot("my-phone")</code> → 返回手机当前屏幕截图</p>
+      </div>
+      <div class="card">
+        <h4>🔄 跨设备文件传输</h4>
+        <p>手机 App → Gateway → 从 NAS 传到电脑<br><code>file_transfer("nas", "/backup/data.zip", "home-pc", "D:\\backup\\")</code></p>
+      </div>
+      <div class="card">
+        <h4>🤖 AI 自动巡检</h4>
+        <p>定时任务 → Gateway AI → 遍历所有设备<br>"检查所有服务器磁盘使用率" → AI 逐个调用 <code>sysinfo</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 接入方式 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> 目标设备接入方式</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>设备</th><th>客户端类型</th><th>说明</th></tr>
+        <tr>
+          <td><b>Windows / macOS / Linux 桌面</b></td>
+          <td><span class="tag t-green">桌面客户端</span></td>
+          <td>Tauri 桌面客户端，MCP Server + 完整 UI（聊天/文件/远程桌面）</td>
+        </tr>
+        <tr>
+          <td><b>Android 手机</b></td>
+          <td><span class="tag t-green">移动端客户端</span></td>
+          <td>React Native 客户端，MCP Server + 完整 UI</td>
+        </tr>
+        <tr>
+          <td><b>NAS（群晖/威联通等）</b></td>
+          <td><span class="tag t-blue">CLI 客户端</span></td>
+          <td>Node.js CLI，MCP Server 无 UI，Docker/systemd 后台运行</td>
+        </tr>
+        <tr>
+          <td><b>Linux 服务器</b></td>
+          <td><span class="tag t-blue">CLI 客户端</span></td>
+          <td>同 NAS CLI 版，npx 或 Docker 部署</td>
+        </tr>
+        <tr>
+          <td><b>树莓派 / 开发板</b></td>
+          <td><span class="tag t-blue">CLI 客户端</span></td>
+          <td>同 CLI 版，支持 GPIO/传感器扩展</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>能力说明</h3>
+    <p style="color:var(--dim);font-size:.85rem">所有被控设备必须安装客户端。客户端作为 MCP Server 注册到 Gateway，能力完整（文件/命令/屏幕/输入/系统信息）。不装客户端的设备不纳入控制范围。</p>
+  </div>
+
+  <!-- ===== 自建客户端 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent3)"></span> 自建客户端：两个功能</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">自建客户端部署在用户的手机和电脑上，连接到主机的 Gateway。</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>功能 1：与 Gateway 沟通</h4>
+        <p>通过 WebSocket 连接 Gateway，提供聊天界面、设备管理、远程桌面。用户操作走 Gateway API。</p>
+      </div>
+      <div class="card">
+        <h4>功能 2：暴露本机能力（MCP Server）</h4>
+        <p>启动后自动注册到 Gateway 作为 MCP Server。AI 或其他设备要操作这台机器时，Gateway 调用它的 MCP Tools。</p>
+      </div>
+      <div class="card">
+        <h4>远程桌面</h4>
+        <p>获取目标设备屏幕推流，直接操控鼠标键盘。通过 WS 数据端口传输。</p>
+      </div>
+      <div class="card">
+        <h4>跨设备操作</h4>
+        <p>手机上找电脑文件、电脑上查服务器日志。客户端不需要知道目标设备用什么协议，Gateway 统一路由。</p>
+      </div>
+      <div class="card">
+        <h4>独立代理</h4>
+        <p>客户端内置独立代理配置（SOCKS5/HTTP），<b>不影响系统代理</b>。只代理客户端自身的 WebSocket 连接。适合需要代理才能访问 Tailscale/外网的场景。</p>
+      </div>
+      <div class="card">
+        <h4>启动自动连接</h4>
+        <p>保存 Gateway 地址 + 认证 token。打开客户端自动连接 Gateway、注册 MCP Server、拉取设备列表。<b>断线自动重连</b>（指数退避 1s→2s→4s→...→60s）。</p>
+      </div>
+    </div>
+
+    <h3>客户端配置</h3>
+    <div class="code-block">
+      <span class="lang">客户端设置</span>
+<pre><span class="comment">// 本地存储，首次启动时配置，之后自动连接</span>
+{
+  <span class="key">"gateway"</span>: {
+    <span class="key">"url"</span>: <span class="str">"ws://100.x.x.x:18789"</span>,     <span class="comment">// Gateway 地址（Tailscale IP / DDNS 域名 / 内网 IP）</span>
+    <span class="key">"token"</span>: <span class="str">"your-auth-token"</span>,        <span class="comment">// 认证 token</span>
+    <span class="key">"autoConnect"</span>: <span class="bool">true</span>,                <span class="comment">// 启动自动连接</span>
+    <span class="key">"reconnect"</span>: <span class="bool">true</span>                   <span class="comment">// 断线自动重连</span>
+  },
+  <span class="key">"proxy"</span>: {
+    <span class="key">"enabled"</span>: <span class="bool">false</span>,                   <span class="comment">// 是否启用独立代理</span>
+    <span class="key">"type"</span>: <span class="str">"socks5"</span>,                   <span class="comment">// socks5 / http</span>
+    <span class="key">"host"</span>: <span class="str">"127.0.0.1"</span>,
+    <span class="key">"port"</span>: <span class="num">7890</span>
+  },
+  <span class="key">"device"</span>: {
+    <span class="key">"name"</span>: <span class="str">"我的手机"</span>,                  <span class="comment">// 本设备名称</span>
+    <span class="key">"exposeAsMcp"</span>: <span class="bool">true</span>                 <span class="comment">// 是否暴露本机能力给 Gateway</span>
+  },
+  <span class="comment">// OTA 更新由 expo-updates 自动处理，无需手动配置</span>
+  <span class="comment">// 更新 URL 在 app.json 的 updates.url 中配置</span>
+}</pre>
+    </div>
+  </div>
+
+  <!-- ===== 完整连接流程 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--pink)"></span> 客户端完整连接流程</h2>
+
+    <h3>启动流程</h3>
+    <div class="diagram">┌──────────────────┐
+│   客户端启动     │
+└────────┬─────────┘
+         ▼
+┌──────────────────┐     通了    ┌──────────────┐
+│ ① 测试 Gateway  │───────────▶│ 连接 Gateway │
+│    是否通联      │            │ 注册 MCP Server│
+│ (config 中的 URL │            │ 拉取设备列表  │
+│  timeout: 3s)   │            │ 启动心跳      │
+└────────┬─────────┘            └──────────────┘
+         │ 不通
+         ▼
+┌──────────────────┐
+│ ② 检查 Tailscale │
+│    状态           │
+└────────┬─────────┘
+         │
+    ┌────┼──────────────┐
+    ▼    ▼              ▼
+  没运行  运行未连接     运行已连接
+    │    │              │
+    ▼    ▼              ▼
+  启动TS ③重连TS    ┌─────────────┐
+  started  │        │ Gateway 不通 │
+  _by_us=T │        │ 提示用户检查  │
+    │    ┌─┴──┐     └─────────────┘
+    │    ▼    ▼
+    │  up 成功 up失败(需认证)
+    │    │    │
+    │    │    ▼
+    │    │  tailscale login
+    │    │    │
+    │    │  ┌─┴──┐
+    │    │  ▼    ▼
+    │    │ 成功  失败→提示用户
+    │    │  │
+    ▼    ▼  ▼
+   ┌──────────────┐
+   │ 回到 ① 重试  │
+   └──────────────┘</div>
+
+    <h3>运行中心跳保活</h3>
+    <div class="diagram">┌──────────────────┐
+│  正常运行中       │
+└────────┬─────────┘
+         ▼
+┌──────────────────┐
+│ 每 30s 发 WS ping│◀─────────────────────┐
+└────────┬─────────┘                       │
+         │                                 │
+    ┌────┴────┐                            │
+    ▼         ▼                            │
+  收到pong  连续3次无响应                    │
+    │         │                            │
+  继续运行     ▼                            │
+         ┌──────────┐                      │
+         │ 判定断开  │                      │
+         └────┬─────┘                      │
+              ▼                            │
+         ┌──────────┐     成功             │
+         │ 重连流程  │──────────────────────┘
+         │ ①②③     │
+         └────┬─────┘
+              │ 全部失败
+              ▼
+         ┌──────────┐
+         │ 通知用户  │
+         │ 连接丢失  │
+         └──────────┘</div>
+
+    <h3>退出流程</h3>
+    <div class="diagram">┌──────────────────┐
+│   客户端退出     │
+└────────┬─────────┘
+         ▼
+┌──────────────────┐
+│ 断开 Gateway WS  │
+└────────┬─────────┘
+         ▼
+┌──────────────────┐     是      ┌──────────────┐
+│ started_by_us?   │───────────▶│ tailscale down│
+└────────┬─────────┘            │ 恢复进入前状态 │
+         │ 否                   └──────────────┘
+         ▼
+┌──────────────────┐
+│ 不动 Tailscale   │
+└──────────────────┘</div>
+
+    <h3>完整状态机</h3>
+    <div class="diagram"><span class="dim">客户端状态：</span>
+
+  <span class="hl">IDLE</span> ──启动──▶ <span class="hl">TESTING</span> ──通──▶ <span class="gr">CONNECTED</span> ──断开──▶ <span class="hi">RECONNECTING</span> ──成功──▶ <span class="gr">CONNECTED</span>
+                    │                │                       │
+                    │ 不通            │ 退出                  │ 全部失败
+                    ▼                ▼                       ▼
+               <span class="hl">CHECK_TS</span>        <span class="dim">SHUTDOWN</span>              <span class="hi">DISCONNECTED</span>
+                    │
+              ┌─────┼─────┐
+              ▼     ▼     ▼
+           没运行  未连接  已连接
+              │     │     │
+              ▼     ▼     ▼
+           启动TS  重连TS  报错
+              │     │
+              ▼     ▼
+           <span class="hl">TESTING</span>（重试）</div>
+  </div>
+
+  <!-- ===== 远程访问 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 设备在外面怎么连？</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">当设备不在同一局域网时（手机在外面、出差用笔记本、云服务器），需要穿透 NAT 连到主机 Gateway。</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>方案</th><th>原理</th><th>优点</th><th>缺点</th><th>国内可用</th></tr>
+        <tr>
+          <td><b>FRP</b></td>
+          <td>主机跑 frpc，连到有公网 IP 的 frps 服务器。客户端通过 frps 的公网地址连 Gateway。</td>
+          <td>国内最流行、开源免费、配置灵活、延迟低</td>
+          <td>需要一台有公网 IP 的服务器（轻量云 30 元/年）</td>
+          <td><span class="tag t-green">最佳</span></td>
+        </tr>
+        <tr>
+          <td><b>ZeroTier</b></td>
+          <td>类似 Tailscale，设备装 ZeroTier 自动组网。有官方中继服务器。</td>
+          <td>开源、国内可用、零配置</td>
+          <td>官方服务器偶尔抽风，可自建 Planet</td>
+          <td><span class="tag t-green">推荐</span></td>
+        </tr>
+        <tr>
+          <td><b>Cloudflare Tunnel</b></td>
+          <td>主机跑 cloudflared，Gateway 通过 Cloudflare 网络暴露。</td>
+          <td>免费、不需要公网 IP、自带 DDoS 防护</td>
+          <td>国内访问可能慢/被墙</td>
+          <td><span class="tag t-orange">看网络</span></td>
+        </tr>
+        <tr>
+          <td><b>Tailscale</b></td>
+          <td>设备装 Tailscale 自动组网。OpenClaw 官方推荐。</td>
+          <td>零配置、加密</td>
+          <td>国内可能需要 DERP 中继、延迟高</td>
+          <td><span class="tag t-orange">看网络</span></td>
+        </tr>
+        <tr>
+          <td><b>WireGuard</b></td>
+          <td>自建 VPN，所有设备连入。</td>
+          <td>高性能、自控</td>
+          <td>需要公网 IP 服务器、手机配置麻烦</td>
+          <td><span class="tag t-blue">可选</span></td>
+        </tr>
+        <tr>
+          <td><b>公网直连</b></td>
+          <td>主机有公网 IP，Gateway 直接暴露。</td>
+          <td>最简单、延迟最低</td>
+          <td>安全风险高</td>
+          <td><span class="tag t-orange">谨慎</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>当前方案</h3>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>Tailscale</h4>
+        <p>所有设备装 Tailscale，自动组网。客户端通过 Tailscale IP 连 Gateway。OpenClaw 官方推荐。</p>
+      </div>
+      <div class="card">
+        <h4>DDNS-GO</h4>
+        <p>主机跑 DDNS-GO，自动更新动态公网 IP 到域名。客户端通过域名连 Gateway。</p>
+      </div>
+    </div>
+    <p style="color:var(--dim);font-size:.85rem;margin-top:12px">初期通过聊天通道（微信/飞书/Telegram）控制设备不需要穿透 NAT。客户端直连（远程桌面等）用 Tailscale 或 DDNS-GO。</p>
+  </div>
+
+  <!-- ===== 多通道记忆 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 多通道记忆统一</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>机制</th><th>配置</th><th>作用</th></tr>
+        <tr><td>身份统一</td><td><code>session.identityLinks</code></td><td>手机 App / 飞书 / 微信 / Telegram 映射为同一用户</td></tr>
+        <tr><td>会话共享</td><td><code>dmScope: "per-peer"</code></td><td>跨通道共享对话上下文</td></tr>
+        <tr><td>长期记忆</td><td><code>MEMORY.md</code></td><td>设备信息、用户偏好、操作历史</td></tr>
+        <tr><td>每日笔记</td><td><code>memory/YYYY-MM-DD.md</code></td><td>按天记录操作日志，支持语义检索</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== OpenClaw 配置 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--orange)"></span> OpenClaw Gateway 配置</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">以下是主机上 OpenClaw 需要的完整配置。</p>
+
+    <div class="code-block">
+      <span class="lang">~/.openclaw/openclaw.json</span>
+<pre>{
+  <span class="comment">// ① MCP Server 注册 — 客户端设备</span>
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"home-pc"</span>: {
+      <span class="key">"url"</span>: <span class="str">"http://192.168.1.100:3001/sse"</span>
+    },
+    <span class="key">"cloud-svr"</span>: {
+      <span class="key">"url"</span>: <span class="str">"http://100.64.0.3:3001/sse"</span>
+    }
+  },
+
+  <span class="comment">// ② 全部设备通过客户端 MCP Server 接入</span>
+
+  <span class="comment">// ③ 跨通道记忆统一</span>
+  <span class="key">"session"</span>: {
+    <span class="key">"dmScope"</span>: <span class="str">"per-peer"</span>,
+    <span class="key">"identityLinks"</span>: {
+      <span class="key">"user:me"</span>: {
+        <span class="key">"channels"</span>: {
+          <span class="key">"feishu"</span>: <span class="str">"ou_xxx"</span>,
+          <span class="key">"wechat"</span>: <span class="str">"wxid_xxx"</span>,
+          <span class="key">"telegram"</span>: <span class="str">"12345678"</span>
+        }
+      }
+    }
+  },
+
+  <span class="comment">// ④ Gateway 绑定（根据网络环境选一种）</span>
+  <span class="key">"gateway"</span>: {
+    <span class="key">"bind"</span>: <span class="str">"tailnet"</span>,              <span class="comment">// Tailscale 虚拟网络</span>
+    <span class="key">"auth"</span>: {
+      <span class="key">"mode"</span>: <span class="str">"token"</span>,
+      <span class="key">"token"</span>: <span class="str">"your-secret-token"</span>
+    }
+  },
+
+  <span class="comment">// ⑤ 模型配置 — 详见 /ai-strategy/ 页面</span>
+  <span class="comment">// 方案 A（推荐）: DeepSeek V4-Flash + MiMo-V2.5 双模型</span>
+  <span class="comment">// 方案 B: MiMo-V2.5 或 MiniMax-M3 多模态单模型</span>
+  <span class="key">"agent"</span>: {
+    <span class="key">"model"</span>: <span class="str">"deepseek/deepseek-v4-flash"</span>,
+    <span class="key">"apiKey"</span>: <span class="str">"${DEEPSEEK_API_KEY}"</span>
+  },
+
+  <span class="comment">// ⑥ 通道配置（按需启用）</span>
+  <span class="key">"channels"</span>: {
+    <span class="key">"telegram"</span>: {
+      <span class="key">"token"</span>: <span class="str">"your-telegram-bot-token"</span>,
+      <span class="key">"dmPolicy"</span>: <span class="str">"pairing"</span>
+    },
+    <span class="key">"feishu"</span>: {
+      <span class="key">"appId"</span>: <span class="str">"your-feishu-app-id"</span>,
+      <span class="key">"appSecret"</span>: <span class="str">"your-feishu-app-secret"</span>
+    }
+  }
+}</pre>
+    </div>
+
+    <h3>配置说明</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>配置项</th><th>作用</th><th>必填</th></tr>
+        <tr><td><code>mcpServers</code></td><td>注册客户端设备，Gateway 自动发现其 MCP Tools</td><td>是</td></tr>
+        <tr><td><code>session.dmScope</code></td><td>跨通道会话共享（per-peer = 同一用户共享）</td><td>推荐</td></tr>
+        <tr><td><code>session.identityLinks</code></td><td>飞书/微信/Telegram 用户映射为同一人</td><td>推荐</td></tr>
+        <tr><td><code>gateway.bind</code></td><td>Gateway 绑定地址（tailnet/0.0.0.0/127.0.0.1）</td><td>是</td></tr>
+        <tr><td><code>gateway.auth</code></td><td>认证方式（token/password）</td><td>是</td></tr>
+        <tr><td><code>agent.model</code></td><td>AI 模型（DeepSeek V4-Flash，详见 <a href="../ai-strategy/index.html" style="color:var(--accent)">AI 模型策略</a>）</td><td>是</td></tr>
+        <tr><td><code>channels</code></td><td>聊天通道配置（Telegram/飞书/微信等）</td><td>按需</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 技术栈 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 最终技术方案</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>组件</th><th>技术</th><th>说明</th></tr>
+        <tr><td>Gateway（主机）</td><td>OpenClaw</td><td>MCP Host，AI 大脑，通道路由</td></tr>
+        <tr><td>MCP Server 核心</td><td>TypeScript + <code>@modelcontextprotocol/sdk</code></td><td>全平台通用，36 个 MCP Tools</td></tr>
+        <tr><td>Desktop 客户端</td><td>Tauri v2 (Rust + React)</td><td>Windows/Linux/macOS，~5MB，内置 OTA updater</td></tr>
+        <tr><td>Android 客户端</td><td>React Native + Expo</td><td>移动端，Expo Updates OTA 热更新</td></tr>
+        <tr><td>CLI 客户端</td><td>TypeScript (Node.js)</td><td>NAS/服务器/树莓派，Docker/systemd 部署</td></tr>
+        <tr><td>共享类型</td><td>TypeScript</td><td>协议定义、MCP Tool 类型、配置类型</td></tr>
+        <tr><td>屏幕推流</td><td>WS 数据端口直连</td><td>screenshot-desktop + Sharp + MJPEG</td></tr>
+        <tr><td>鼠标键盘</td><td>nut.js</td><td>跨平台输入模拟</td></tr>
+        <tr><td>OTA 更新</td><td>Expo Updates (JS bundle) + Tauri updater (APK)</td><td>小更新 JS bundle OTA 静默推送（新增页面/改 UI/修 Bug）；大更新 APK 重装（原生模块变更）</td></tr>
+        <tr><td>CI/CD</td><td>GitHub Actions / Gitee</td><td>push tag → 自动构建所有平台</td></tr>
+        <tr><td>编辑器</td><td>IntelliJ IDEA</td><td>TypeScript + Rust 开发</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== OTA 更新策略 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> OTA 更新策略</h2>
+    <div class="highlight">
+      <h4>双轨更新：小更新 OTA 静默推送，大更新 APK 重装</h4>
+      <p>
+        <b>小更新（JS bundle）：</b>新增页面、改 UI、修 Bug、改业务逻辑 → expo-updates 静默推送 JS bundle（~1-2MB），用户无感，下次打开自动生效。<br>
+        <b>大更新（APK）：</b>新增原生模块、改图标、升级 React Native 版本 → 需要重新打包 APK，用户手动安装。
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>更新类型</th><th>方式</th><th>用户感知</th><th>场景</th></tr>
+        <tr><td><b>小更新</b></td><td>JS bundle OTA (expo-updates)</td><td>无感，自动生效</td><td>新增页面、改 UI、修 Bug、改逻辑、新增 JS 依赖</td></tr>
+        <tr><td><b>大更新</b></td><td>APK 重装</td><td>需手动安装</td><td>新增原生模块、改图标/启动图、改包名、升级 RN</td></tr>
+      </table>
+    </div>
+
+    <h3>OTA 发布流程</h3>
+    <div class="code-block">
+      <span class="lang">发布 JS bundle 更新</span>
+<pre><span class="comment"># 1. 修改代码（JS/TS）</span>
+<span class="comment"># 2. 增加版本号（app.json version + versionCode）</span>
+
+<span class="comment"># 3. 导出 JS bundle</span>
+npx expo export --platform android
+
+<span class="comment"># 4. 上传 dist/ 到 Gitee 静态仓库</span>
+git add dist/ && git commit -m "ota: v0.1.1" && git push
+
+<span class="comment"># 5. App 自动检测更新（启动时 + 每 24 小时）</span>
+<span class="comment"># 用户下次打开 App 自动生效</span></pre>
+    </div>
+
+    <h3>OTA 配置（app.json）</h3>
+    <div class="code-block">
+      <span class="lang">app.json</span>
+<pre>{
+  <span class="key">"expo"</span>: {
+    <span class="key">"updates"</span>: {
+      <span class="key">"url"</span>: <span class="str">"https://gitee.com/your-org/gca-ota/manifest.json"</span>
+    },
+    <span class="key">"plugins"</span>: [
+      [<span class="str">"expo-updates"</span>, { <span class="key">"username"</span>: <span class="str">"gca"</span> }]
+    ]
+  }
+}</pre>
+    </div>
+  </div>
+
+  <!-- ===== 项目结构 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> 项目结构</h2>
+    <div class="code-block">
+<pre>gca/
+├── packages/
+│   ├── client/                  <span class="comment"># 桌面/移动端客户端（MCP Server + UI）</span>
+│   │   ├── src/
+│   │   │   ├── server/          <span class="comment"># MCP Server（暴露本机能力给 Gateway）</span>
+│   │   │   │   ├── tools/       <span class="comment"># MCP Tools（file/exec/screen/input/sysinfo）</span>
+│   │   │   │   └── data-channel/<span class="comment"># WS 数据端口（推流/文件/键鼠）</span>
+│   │   │   ├── ui/              <span class="comment"># UI（聊天/文件浏览/远程桌面，连 Gateway WS API）</span>
+│   │   │   └── platform/        <span class="comment"># 平台适配（win/linux/mac/android）</span>
+│   │   └── package.json
+│   ├── client-cli/              <span class="comment"># CLI 版客户端（NAS/树莓派/无显示器设备）</span>
+│   │   ├── src/
+│   │   │   ├── index.ts         <span class="comment"># CLI 入口（gca-cli start/stop/status）</span>
+│   │   │   ├── daemon.ts        <span class="comment"># 后台守护进程</span>
+│   │   │   └── server/          <span class="comment"># 复用 client/server 的 MCP Tools</span>
+│   │   └── package.json
+│   └── shared/                  <span class="comment"># 共享类型</span>
+├── pnpm-workspace.yaml
+└── README.md</pre>
+    </div>
+  </div>
+
+  <!-- ===== 实现细节 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 实现细节</h2>
+
+    <h3>客户端实现</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>模块</th><th>实现</th><th>说明</th></tr>
+        <tr>
+          <td>MCP Server</td>
+          <td><code>@modelcontextprotocol/sdk</code></td>
+          <td>启动时创建 MCP Server 实例，注册 Tools，通过 SSE/WS 暴露给 Gateway</td>
+        </tr>
+        <tr>
+          <td>Gateway 连接</td>
+          <td>WebSocket Client</td>
+          <td>连接 Gateway 的 WS API，支持独立代理（SOCKS5/HTTP）、自动重连</td>
+        </tr>
+        <tr>
+          <td>文件服务</td>
+          <td>Node.js <code>fs</code> / Rust <code>std::fs</code></td>
+          <td>实现 file_list/read/write/move/delete，支持 glob 过滤</td>
+        </tr>
+        <tr>
+          <td>命令执行</td>
+          <td><code>child_process</code> / Rust <code>std::process::Command</code></td>
+          <td>实现 exec，支持超时、工作目录、环境变量</td>
+        </tr>
+        <tr>
+          <td>屏幕捕获</td>
+          <td><code>screenshot-desktop</code> (Node) / <code>screenshots</code> crate (Rust)</td>
+          <td>截取屏幕，<b>WebP 压缩</b>后返回 MCP image content type（~30KB vs 旧方案 ~400KB）</td>
+        </tr>
+        <tr>
+          <td>系统信息</td>
+          <td><code>systeminformation</code> (Node) / <code>sysinfo</code> crate (Rust)</td>
+          <td>CPU/内存/磁盘/网络/运行时间</td>
+        </tr>
+        <tr>
+          <td>独立代理</td>
+          <td>Tauri: <code>tokio-tungstenite</code> + HTTP CONNECT / RN: OkHttp proxy</td>
+          <td>只代理客户端自身的 WS 连接，不影响系统代理</td>
+        </tr>
+        <tr>
+          <td>UI</td>
+          <td>Tauri: React / RN: React Native</td>
+          <td>聊天界面、设备列表、文件浏览器、远程桌面、设置页面</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>通信流程</h3>
+    <div class="diagram"><span class="dim">场景：用户在手机上找电脑文件</span>
+
+  手机客户端                      Gateway                        电脑客户端
+      │                              │                              │
+      │  ① 用户操作/发消息            │                              │
+      │  ──WS──▶                     │                              │
+      │           ② AI 调用 MCP Tool │                              │
+      │           file_list("pc-1")  │                              │
+      │                              │  ③ 转发到电脑客户端            │
+      │                              │  ──MCP──▶                    │
+      │                              │           ④ 电脑执行 file_list│
+      │                              │           本地文件系统操作     │
+      │                              │                    ◀──结果── │
+      │                    ◀──结果── │                              │
+      │  ⑤ 返回给手机                 │                              │
+      │  ◀──结果──                    │                              │
+      │                              │                              │
+  <span class="dim">场景：用户在电脑上看手机屏幕</span>
+
+  电脑客户端                      Gateway                        手机客户端
+      │                              │                              │
+      │  ① 调用 screen_capture("phone")  │                              │
+      │  ──WS──▶                     │                              │
+      │           ② 转发到手机客户端   │                              │
+      │                              │  ──MCP──▶                    │
+      │                              │           ③ 手机截屏          │
+      │                              │                    ◀──WebP── │
+      │                    ◀──图片── │                              │
+      │  ④ 显示手机屏幕               │                              │
+      │  ◀──图片──                    │                              │
+      │                              │                              │
+  <span class="dim">场景：AI 看屏幕（方案 A — 双模型）</span>
+
+  Gateway AI                     视觉模型                    DeepSeek V4
+      │                              │                              │
+      │  ① screen_capture("pc")     │                              │
+      │  ──MCP──▶                   │                              │
+      │           ② 截图 WebP ~30KB │                              │
+      │                    ◀──img── │                              │
+      │  ③ 截图 → 视觉模型           │                              │
+      │  ──API──▶                   │                              │
+      │           ④ 返回结构化文本   │                              │
+      │                    ◀──text──│                              │
+      │  ⑤ 文本 + 用户指令           │                              │
+      │  ──API──────────────────────────────────────────────────────▶│
+      │           ⑥ DeepSeek 推理决策，调用 MCP Tool 执行             │
+      │                    ◀──action────────────────────────────────│</div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">← 返回首页</a> &nbsp;|&nbsp;
+  <a href="../capabilities/index.html">能力全景 →</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

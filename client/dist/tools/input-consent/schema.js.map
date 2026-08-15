@@ -1,0 +1,1 @@
+{"version":3,"file":"schema.js","sourceRoot":"","sources":["../../../src/tools/input-consent/schema.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB,MAAM,CAAC,MAAM,uBAAuB,GAAG;IACrC,OAAO,EAAE,CAAC;SACP,MAAM,EAAE;SACR,GAAG,EAAE;SACL,GAAG,CAAC,CAAC,CAAC;SACN,GAAG,CAAC,GAAG,CAAC;SACR,QAAQ,CAAC,+DAA+D,CAAC;CAC7E,CAAC"}

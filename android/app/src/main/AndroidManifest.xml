@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 15+ BOOT_COMPLETED FGS 限制：dataSync 被禁（ForegroundServiceStartNotAllowedException），
+         换 connectedDevice（豁免列表内，设备互联服务语义吻合）——2026-08-13 P3 修复 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- connectedDevice FGS 的 "设备连接" 权限要求（agent 为网络设备互联，网络权限合理） -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- 审批通知（2026-08-14 App 审批功能）——Android 13+ 运行时权限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="false"
+        android:label="GCA Client"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GcaApp"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".GcaAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name=".GcaService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
+
+        <!-- 审批界面（2026-08-14）：通知直达 + 弹窗形式（dialog 主题）；内部组件；
+             singleTop：多条审批到达时复用弹窗实例（onNewIntent 刷新列表），不叠窗 -->
+        <activity
+            android:name=".ApprovalActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.GcaApp.Dialog" />
+
+        <!-- owner 绑定（2026-08-14）：server 地址 + 管理 token -->
+        <activity
+            android:name=".OwnerSetupActivity"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- Android 15+ FGS 限制兜底：用户解锁后立即启动（锁屏期轮询兜底） -->
+                <action android:name="android.intent.action.USER_PRESENT" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

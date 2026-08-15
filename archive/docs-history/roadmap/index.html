@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实施路线图 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.timeline{position:relative;padding-left:40px}
+.timeline::before{content:'';position:absolute;left:15px;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--accent),var(--accent2),var(--accent3),var(--green),var(--orange));border-radius:2px}
+.phase{position:relative;margin-bottom:40px;animation:fadeIn .5s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.phase-dot{position:absolute;left:-33px;top:24px;width:20px;height:20px;border-radius:50%;border:3px solid var(--bg);z-index:1}
+.phase-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .3s}
+.phase-card:hover{border-color:var(--accent);box-shadow:0 8px 32px rgba(59,130,246,.1)}
+.phase-header{padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.phase-header .phase-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:4px 12px;border-radius:8px}
+.phase-header h2{font-size:1.25rem;flex:1}
+.phase-header .duration{font-size:.85rem;color:var(--dim);display:flex;align-items:center;gap:6px}
+.phase-body{padding:0 24px 24px}
+.phase-goal{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:.9rem}
+.phase-goal strong{color:var(--accent)}
+.task-list{list-style:none;display:grid;gap:8px}
+.task-list li{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(255,255,255,.02);border-radius:8px;font-size:.88rem;color:var(--dim);transition:background .2s}
+.task-list li:hover{background:rgba(255,255,255,.05)}
+.task-num{min-width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.05);color:var(--text)}
+.deliverable{margin-top:16px;padding:14px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600}
+.p1 .phase-dot,.p1 .phase-label{background:var(--accent);color:white}
+.p1 .deliverable{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--accent)}
+.p2 .phase-dot,.p2 .phase-label{background:var(--accent2);color:white}
+.p2 .deliverable{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:var(--accent2)}
+.p3 .phase-dot,.p3 .phase-label{background:var(--accent3);color:white}
+.p3 .deliverable{background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);color:var(--accent3)}
+.p4 .phase-dot,.p4 .phase-label{background:var(--green);color:white}
+.p4 .deliverable{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green)}
+.p5 .phase-dot,.p5 .phase-label{background:var(--orange);color:white}
+.p5 .deliverable{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--orange)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="../architecture/index.html">架构</a><span class="sep">/</span>
+  <span class="current">实施路线图</span>
+</div>
+
+<div class="container">
+  <h1>实施路线图</h1>
+  <p class="subtitle">五阶段渐进式开发，每个阶段交付独立可用的产品</p>
+
+  <div class="summary-bar">
+    <div class="s-item"><div class="num" style="color:var(--accent)">5</div><div class="label">实施阶段</div></div>
+    <div class="s-item"><div class="num" style="color:var(--accent2)">28</div><div class="label">总周数</div></div>
+    <div class="s-item"><div class="num" style="color:var(--green)">36</div><div class="label">MCP Tools</div></div>
+    <div class="s-item"><div class="num" style="color:var(--orange)">4</div><div class="label">目标平台</div></div>
+  </div>
+
+  <div class="timeline">
+    <!-- Phase 1 -->
+    <div class="phase p1">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-label">Phase 1</span>
+          <h2>基础 MVP</h2>
+          <span class="duration">第 1-4 周</span>
+        </div>
+        <div class="phase-body">
+          <div class="phase-goal"><strong>目标：</strong>MCP Server 跑通，通过聊天通道控制一台设备</div>
+          <ul class="task-list">
+            <li><span class="task-num">1</span>安装配置 OpenClaw Gateway（主机），配置 mcpServers</li>
+            <li><span class="task-num">2</span>实现客户端的 MCP Server 功能：10 个核心 MCP Tool（file_list/read/write、exec、process_list、sysinfo、power、notify_send）</li>
+            <li><span class="task-num">3</span>客户端启动时自动通过 SSE 注册到 Gateway</li>
+            <li><span class="task-num">4</span>端到端测试：Telegram/飞书发 "查看电脑上的文件" → AI 调用 MCP tool → 执行 → 返回</li>
+            <li><span class="task-num">5</span>配置 session.identityLinks 跨通道记忆统一</li>
+          </ul>
+          <div class="deliverable">交付物：客户端运行在主机，通过 Telegram/飞书/微信控制</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase p2">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-label">Phase 2</span>
+          <h2>多设备 + Android 客户端</h2>
+          <span class="duration">第 5-10 周</span>
+        </div>
+        <div class="phase-body">
+          <div class="phase-goal"><strong>目标：</strong>多设备 + Android 客户端 + 远程控制</div>
+          <ul class="task-list">
+            <li><span class="task-num">1</span>客户端跨平台：Linux / macOS 版本（复用 Windows 代码）</li>
+            <li><span class="task-num">2</span>添加远程控制能力：屏幕截图/推流、鼠标键盘直通、剪贴板同步</li>
+            <li><span class="task-num">3</span>自建 Android 客户端：设备列表、文件浏览器、远程终端、远程桌面、AI 聊天</li>
+            <li><span class="task-num">4</span>跨设备操作：手机找电脑文件、电脑看手机截图</li>
+          </ul>
+          <div class="deliverable">交付物：多设备互联，手机控制电脑</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase p3">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-label">Phase 3</span>
+          <h2>桌面客户端 + 完善</h2>
+          <span class="duration">第 11-16 周</span>
+        </div>
+        <div class="phase-body">
+          <div class="phase-goal"><strong>目标：</strong>桌面客户端 + AI 应用操控 + 完整体验</div>
+          <ul class="task-list">
+            <li><span class="task-num">1</span>自建 Tauri 桌面客户端：设备仪表盘、文件管理器、远程终端、远程桌面、系统监控</li>
+            <li><span class="task-num">2</span>远程控制增强：MJPEG 推流（15-30fps）、鼠标键盘实时操控、多显示器、剪贴板同步</li>
+            <li><span class="task-num">3</span>AI 应用操控：UI 元素操作（Accessibility API）、浏览器自动化、OCR 屏幕识别</li>
+            <li><span class="task-num">4</span>跨设备文件传输：设备间直接传输文件</li>
+            <li><span class="task-num">5</span>客户端连接生命周期：自动通联检测、Tailscale 按需启停、心跳保活、断线重连</li>
+            <li><span class="task-num">6</span>打包为 Windows .exe + Linux .deb + Android APK</li>
+          </ul>
+          <div class="deliverable">交付物：全平台客户端，AI 操控应用，跨设备文件传输</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="phase p4">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-label">Phase 4</span>
+          <h2>智能家居与 IoT</h2>
+          <span class="duration">第 17-22 周</span>
+        </div>
+        <div class="phase-body">
+          <div class="phase-goal"><strong>目标：</strong>扩展到计算机之外的设备</div>
+          <ul class="task-list">
+            <li><span class="task-num">1</span>轻量 IoT 客户端（树莓派 CLI 版）</li>
+            <li><span class="task-num">2</span>智能家居集成（Tuya / SmartThings / Home Assistant）</li>
+            <li><span class="task-num">3</span>定时任务（通过 OpenClaw cron，如每晚 2 点备份照片）</li>
+            <li><span class="task-num">4</span>通知转发（手机通知 → 聊天通道）</li>
+          </ul>
+          <div class="deliverable">交付物：统一控制 PC、手机和 IoT 设备</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 5 -->
+    <div class="phase p5">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-label">Phase 5</span>
+          <h2>安全加固与发布</h2>
+          <span class="duration">第 23-28 周</span>
+        </div>
+        <div class="phase-body">
+          <div class="phase-goal"><strong>目标：</strong>生产级质量，可正式发布</div>
+          <ul class="task-list">
+            <li><span class="task-num">1</span>端到端加密（libsodium / NaCl）</li>
+            <li><span class="task-num">2</span>基于角色的权限控制（如 "此通道只能读文件，不能执行命令"）</li>
+            <li><span class="task-num">3</span>所有远程操作审计日志</li>
+            <li><span class="task-num">4</span>客户端自动更新机制</li>
+            <li><span class="task-num">5</span>发布：Play Store、GitHub Releases</li>
+            <li><span class="task-num">6</span>文档和安装指南</li>
+          </ul>
+          <div class="deliverable">交付物：可发布的正式产品</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 风险 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 风险与缓解</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>风险</th><th>影响</th><th>缓解措施</th></tr>
+        <tr><td>OpenClaw MCP 协议变更</td><td>集成困难</td><td>适配层隔离；锁定 OpenClaw 版本</td></tr>
+        <tr><td>跨平台 UI 自动化</td><td>开发效率</td><td>Phase 1 只做 Windows；优先浏览器自动化</td></tr>
+        <tr><td>个人开发者精力有限</td><td>进度延迟</td><td>每阶段独立交付；Phase 1 仅需 4 周</td></tr>
+        <tr><td>外网访问不稳定</td><td>连接中断</td><td>Tailscale + DDNS-GO 双方案；心跳自动重连</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 验证 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 验证方式</h2>
+    <div class="grid grid-3">
+      <div class="card"><h4>Phase 1</h4><p>Telegram 发 "列出电脑上的文件" → 收到文件列表</p></div>
+      <div class="card"><h4>Phase 2</h4><p>Android 客户端看到多台设备在线，手机找电脑文件成功</p></div>
+      <div class="card"><h4>Phase 3</h4><p>桌面客户端远程桌面操控流畅，AI 自动操作应用成功</p></div>
+      <div class="card"><h4>Phase 4</h4><p>"关闭客厅灯" → IoT 设备响应；定时备份执行</p></div>
+      <div class="card"><h4>Phase 5</h4><p>安全审计通过，自动更新正常，Play Store 上架</p></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">首页</a> &nbsp;|&nbsp; <a href="../architecture/index.html">架构</a> &nbsp;|&nbsp; <a href="../capabilities/index.html">能力</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

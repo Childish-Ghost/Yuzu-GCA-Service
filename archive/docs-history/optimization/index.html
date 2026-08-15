@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>信息优化方案 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .verdict{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;letter-spacing:.5px}
+  .v-go{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+  .v-caution{background:rgba(245,158,11,.15);color:var(--orange);border:1px solid rgba(245,158,11,.3)}
+  .v-stop{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+  .action-card{background:var(--card);border-left:4px solid var(--accent);border-radius:0 12px 12px 0;padding:16px 18px;margin-bottom:12px}
+  .action-card.urgent{border-color:var(--red)}
+  .action-card.important{border-color:var(--orange)}
+  .action-card.nice{border-color:var(--accent)}
+  .action-card h4{font-size:.92rem;margin-bottom:4px}
+  .action-card p{color:var(--dim);font-size:.82rem;line-height:1.5}
+  .action-card .action{display:inline-block;margin-top:8px;font-size:.75rem;padding:4px 10px;border-radius:6px;font-weight:600}
+  .action-card.urgent .action{background:rgba(239,68,68,.12);color:var(--red)}
+  .action-card.important .action{background:rgba(245,158,11,.12);color:var(--orange)}
+  .action-card.nice .action{background:rgba(59,130,246,.12);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <span class="current">信息优化方案</span>
+</div>
+
+<div class="container">
+  <h1>📊 信息优化方案</h1>
+  <p class="subtitle">基于全部项目文档的交叉分析，汇总优化建议并制定可执行方案</p>
+
+  <!-- 概要 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 执行概要</h2>
+    <div class="highlight">
+      <h4>核心发现：文档完善但范围过大，需要聚焦</h4>
+      <p>
+        当前 9 份文档覆盖了架构、能力（36 MCP Tool）、5 阶段路线图（28 周）、55 个开发任务、安全分析、维护优化和 PM 审查。
+        <b>核心问题：计划覆盖 10 大类能力 × 4 个平台 × 远程桌面 × AI 操控 = 个人开发者 2-3 年工作量。</b><br><br>
+        <b>PM 审查明确建议：</b>Phase 1 严格控制范围，只做「通过聊天通道控制一台 Windows 设备」（2 周 MVP）。
+        远程桌面、Android、AI 操控全部推到后续阶段。
+      </p>
+    </div>
+  </div>
+
+  <!-- 问题汇总 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 跨文档问题汇总</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">以下问题在 maintenance、pm-review、security 三份文档中被反复提及，按严重程度排列。</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>#</th><th>问题</th><th>来源</th><th>严重度</th><th>影响</th></tr>
+        <tr>
+          <td>1</td>
+          <td><b>范围过大</b> — 36 Tool × 4 平台 × 远程桌面 × AI 操控</td>
+          <td>PM 审查 P0</td>
+          <td><span class="tag t-red">致命</span></td>
+          <td>28 周计划不可行，个人开发者需要 2-3 年</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>无测试策略</b> — 36 MCP Tool × 多平台无任何测试</td>
+          <td>维护 P0</td>
+          <td><span class="tag t-red">致命</span></td>
+          <td>回归问题无法发现，质量无保障</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>无错误恢复</b> — 网络断开/Gateway 重启/设备休眠无处理</td>
+          <td>维护 P0</td>
+          <td><span class="tag t-red">致命</span></td>
+          <td>远程场景下错误是常态，无恢复则不可用</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>无用户验证</b> — 设计大量功能但未验证用户需求</td>
+          <td>PM 审查 P0</td>
+          <td><span class="tag t-red">致命</span></td>
+          <td>可能做了没人用的功能</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>外部依赖风险</b> — OpenClaw 是核心依赖，API 可能变更</td>
+          <td>PM 审查 P0</td>
+          <td><span class="tag t-red">致命</span></td>
+          <td>OpenClaw 变更可能导致全部重写</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>跨平台 UI 自动化</b> — 三套 API 各平台独立实现</td>
+          <td>维护 P0 / 安全分析</td>
+          <td><span class="tag t-orange">严重</span></td>
+          <td>AI 操控能力开发成本极高</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><b>无日志与可观测性</b> — 远程设备出问题无法排查</td>
+          <td>维护 P1</td>
+          <td><span class="tag t-orange">严重</span></td>
+          <td>远程调试黑盒，运维困难</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><b>无配置管理</b> — 客户端配置无统一方案</td>
+          <td>维护 P1</td>
+          <td><span class="tag t-orange">严重</span></td>
+          <td>多设备配置混乱</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><b>无 CI/CD</b> — 手动打包多平台耗时易错</td>
+          <td>维护 P1</td>
+          <td><span class="tag t-orange">严重</span></td>
+          <td>发布效率低，容易出错</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><b>无里程碑验收标准</b> — 没有明确的"完成"定义</td>
+          <td>PM 审查 P1</td>
+          <td><span class="tag t-orange">严重</span></td>
+          <td>进度无法衡量</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 安全风险 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--pink)"></span> 安全风险摘要</h2>
+    <div class="grid grid-3">
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>🔴 命令注入</h4>
+        <p>exec MCP Tool 暴露命令执行，AI 被 prompt injection 可能执行恶意命令。缓解：allowlist + approval + 沙箱。</p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>🔴 未授权远程桌面</h4>
+        <p>屏幕推流 + 键鼠直通 = 完全控制。缓解：Gateway auth token + Tailscale 加密 + 被控端确认。</p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>🔴 Prompt Injection</h4>
+        <p>不受信内容携带恶意指令操纵 AI。缓解：旗舰模型 + reader agent 预处理 + approval。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文档本身优化 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 文档层面优化（本次已实施）</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>优化项</th><th>状态</th><th>说明</th></tr>
+        <tr>
+          <td>flow/index.html CSS 路径修复</td>
+          <td><span class="tag t-green">✅ 已完成</span></td>
+          <td>style.css → ../style.css，与其他子页面一致</td>
+        </tr>
+        <tr>
+          <td>flow/index.html 导航链接修复</td>
+          <td><span class="tag t-green">✅ 已完成</span></td>
+          <td>所有链接添加 ../ 前缀，与其他页面一致</td>
+        </tr>
+        <tr>
+          <td>新建信息优化方案页面</td>
+          <td><span class="tag t-green">✅ 已完成</span></td>
+          <td>本页面，汇总所有跨文档优化建议</td>
+        </tr>
+        <tr>
+          <td>文档迁移到 VitePress</td>
+          <td><span class="tag t-purple">P2 后续</span></td>
+          <td>手写 HTML → Markdown + VitePress，改样式一次生效（已在 maintenance 中标记）</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 行动计划 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 建议行动计划</h2>
+
+    <h3>🔴 立即行动（本周）</h3>
+    <div class="action-card urgent">
+      <h4>1. 采纳 PM 审查建议：砍范围</h4>
+      <p>将 roadmap Phase 1 从 4 周缩减为 2 周 MVP：只做 exec + file_list 两个 Tool，只支持 Windows，只通过 Telegram 通道。</p>
+      <span class="action">⏱ 预计 2 小时（改文档）</span>
+    </div>
+    <div class="action-card urgent">
+      <h4>2. 定义 Phase 1 验收标准</h4>
+      <p>Telegram 发 "dir C:\Users" → 收到目录列表。只有这一个验收用例通过才算 Phase 1 完成。</p>
+      <span class="action">⏱ 预计 30 分钟</span>
+    </div>
+
+    <h3 style="margin-top:24px">🟡 短期行动（Phase 1 开发中）</h3>
+    <div class="action-card important">
+      <h4>3. 加入错误恢复</h4>
+      <p>WS 自动重连（指数退避 1s→2s→4s→...→60s）、请求超时 + 重试（已在架构文档中规划，需在代码中落实）。</p>
+      <span class="action">⏱ 随开发进行</span>
+    </div>
+    <div class="action-card important">
+      <h4>4. 加入基础日志</h4>
+      <p>用 pino 做结构化日志，客户端日志通过 WS 上报 Gateway（已在 maintenance 中规划）。</p>
+      <span class="action">⏱ 随开发进行</span>
+    </div>
+    <div class="action-card important">
+      <h4>5. 锁定 OpenClaw 版本</h4>
+      <p>在 package.json 锁定 OpenClaw 版本号，所有交互封装在适配层（PM 审查建议）。</p>
+      <span class="action">⏱ 开发第一天</span>
+    </div>
+
+    <h3 style="margin-top:24px">🔵 中期行动（Phase 1 完成后）</h3>
+    <div class="action-card nice">
+      <h4>6. 用户验证</h4>
+      <p>Phase 1 交付后自己用 2 周，记录哪些功能真正用到。根据实际使用调整 Phase 2 优先级。</p>
+      <span class="action">⏱ Phase 1 + 2 周</span>
+    </div>
+    <div class="action-card nice">
+      <h4>7. 搭建 CI/CD</h4>
+      <p>GitHub Actions：push tag → 自动构建 Windows + Linux。Tauri updater 自动更新。</p>
+      <span class="action">⏱ Phase 2 初期</span>
+    </div>
+    <div class="action-card nice">
+      <h4>8. 文档迁移到 VitePress</h4>
+      <p>将 9 个手写 HTML 页面迁移为 Markdown，使用 VitePress 构建。改样式一次生效，支持搜索。</p>
+      <span class="action">⏱ Phase 2 期间</span>
+    </div>
+  </div>
+
+  <!-- MVP 对比 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> MVP 范围对比</h2>
+    <div class="before-after">
+      <div class="ba-box before">
+        <span class="ba-label red">当前 Plan（范围过大）</span>
+        Phase 1（4 周）：10 个 MCP Tool<br>
+        Phase 2（6 周）：Android + 远程控制<br>
+        Phase 3（6 周）：桌面客户端 + AI 操控<br>
+        Phase 4（6 周）：IoT + 智能家居<br>
+        Phase 5（6 周）：安全加固 + 发布<br>
+        <b>总计：28 周（实际需 2-3 年）</b>
+      </div>
+      <div class="ba-arrow">→</div>
+      <div class="ba-box after">
+        <span class="ba-label green">建议 MVP 路径</span>
+        <b>Phase 1（2 周）：</b>2 个 Tool + Windows + Telegram<br>
+        <b>Phase 2（4 周）：</b>扩展到 10 个 Tool + 多通道<br>
+        <b>Phase 3（6 周）：</b>多设备 + CLI 客户端<br>
+        <b>之后：</b>根据用户反馈决定优先级<br>
+        <b>总计：12 周拿到可用产品</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关键结论 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 关键结论</h2>
+    <div class="grid grid-2">
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <h4>✅ 架构设计合理</h4>
+        <p>OpenClaw Gateway + MCP Server 客户端 的架构是可行的。安全分析确认整体可行，风险可控。</p>
+      </div>
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <h4>✅ 文档覆盖全面</h4>
+        <p>9 份文档覆盖了架构、能力、路线图、安全、维护、PM 审查，对个人项目来说文档质量很高。</p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>❌ 范围必须砍</h4>
+        <p>当前 5 阶段 28 周计划对个人开发者不现实。采纳 PM 审查建议，Phase 1 只做最小 MVP。</p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>❌ 先验证再扩展</h4>
+        <p>没有用户验证的前提下设计大量功能是危险的。Phase 1 交付后必须先自己使用验证。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">← 返回首页</a> &nbsp;|&nbsp;
+  <a href="../architecture/index.html">系统架构</a> &nbsp;|&nbsp;
+  <a href="../pm-review/index.html">PM 审查</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可行性分析与优化建议 — Global Control Assistant</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.feasibility-tag{display:inline-block;padding:3px 12px;border-radius:6px;font-size:.78rem;font-weight:600;margin-left:8px}
+.f-high{background:rgba(34,197,94,.15);color:var(--green)}
+.f-mid{background:rgba(245,158,11,.15);color:var(--orange)}
+.f-low{background:rgba(239,68,68,.15);color:var(--red)}
+.contradiction{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px 18px;margin-bottom:12px}
+.contradiction h4{color:var(--red);margin-bottom:6px}
+.contradiction .where{font-size:.78rem;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.recommendation{background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:14px 18px;margin-bottom:12px}
+.recommendation h4{color:var(--accent);margin-bottom:6px}
+.recommendation .impact{font-size:.78rem;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.phase-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.phase-compare .col{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.phase-compare .col h4{font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.phase-compare .col ul{list-style:none;padding:0;margin:0}
+.phase-compare .col li{font-size:.82rem;color:var(--dim);padding:4px 0;display:flex;gap:8px;align-items:flex-start}
+.phase-compare .col li::before{content:'';min-width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0}
+.phase-compare .col.before li::before{background:var(--red)}
+.phase-compare .col.after li::before{background:var(--green)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="optimization/index.html">优化方案</a><span class="sep">/</span>
+  <span class="current">可行性分析</span>
+</div>
+
+<div class="container">
+  <h1>可行性分析与优化建议</h1>
+  <p class="subtitle">基于 9 份文档的交叉分析，独立评估架构可行性、技术风险和范围合理性</p>
+
+  <div class="summary-bar">
+    <div class="s-item"><div class="num" style="color:var(--green)">1</div><div class="label">可行性高</div></div>
+    <div class="s-item"><div class="num" style="color:var(--orange)">3</div><div class="label">需调整</div></div>
+    <div class="s-item"><div class="num" style="color:var(--red)">4</div><div class="label">高风险</div></div>
+    <div class="s-item"><div class="num" style="color:var(--accent)">8</div><div class="label">优化建议</div></div>
+  </div>
+
+  <!-- ===== 决策记录 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 决策记录（2026-07-23 用户确认）</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>建议项</th><th>用户决策</th><th>说明</th></tr>
+        <tr>
+          <td>1. 验证 OpenClaw 可用性</td>
+          <td><span class="tag t-orange">保留使用</span></td>
+          <td>重新构建 OpenClaw 类似功能的成本太高，继续基于 OpenClaw 开发。Phase 0 POC 验证其基础能力</td>
+        </tr>
+        <tr>
+          <td>2. 统一技术栈：Node.js CLI</td>
+          <td><span class="tag t-green">采纳</span></td>
+          <td>Phase 1 唯一形态：Node.js CLI 客户端，跑 MCP Server + 连接 Gateway</td>
+        </tr>
+        <tr>
+          <td>3. Phase 1 砍到 3 个 Tool</td>
+          <td><span class="tag t-green">采纳</span></td>
+          <td>只做 exec + file_list + sysinfo，其余推后</td>
+        </tr>
+        <tr>
+          <td>4. 远程桌面走 Gateway 中转</td>
+          <td><span class="tag t-orange">调整方案</span></td>
+          <td>全量走 Gateway 对服务器和带宽要求太高。改为<b>控制平面走 Gateway + 数据平面直连</b>（详见下方方案）</td>
+        </tr>
+        <tr>
+          <td>5. exec approval 机制</td>
+          <td><span class="tag t-green">采纳</span></td>
+          <td>在不影响使用体验的前提下处理——只读命令免审批，写操作弹确认</td>
+        </tr>
+        <tr>
+          <td>6. Android MCP Server 选型</td>
+          <td><span class="tag t-blue">需对比 B/C</span></td>
+          <td>Android 本地必须有 MCP。方案 B (nodejs-mobile) 和方案 C (Rust) 优缺点对比详见下方</td>
+        </tr>
+        <tr>
+          <td>7. FRP 替代 Tailscale</td>
+          <td><span class="tag t-gray">暂不讨论</span></td>
+          <td>当前阶段用不上外网穿透，暂搁置。Tailscale 定位为外网访问回内网的辅助工具</td>
+        </tr>
+        <tr>
+          <td>8. 文档迁移 VitePress</td>
+          <td><span class="tag t-green">采纳</span></td>
+          <td>迁移到 Markdown + VitePress，但保留 HTML 可视化版本（用户喜欢看可视化）</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 远程桌面方案 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent3)"></span> 远程桌面：控制平面/数据平面分离方案</h2>
+    <div class="highlight">
+      <h4>核心思路：Gateway 管认证和审计，不管数据流</h4>
+      <p>
+        全量走 Gateway 的问题：屏幕推流是 15-30fps 的 MJPEG 视频，如果所有设备的远程桌面都经过 Gateway 转发，
+        网关服务器 CPU 和带宽会被吃满。<br><br>
+        <b>分离方案：</b><br>
+        1. <b>控制平面（走 Gateway）</b>：发起方通过 Gateway 请求远程桌面 → Gateway 验证身份和权限 → 签发短期 session token → 记审计日志<br>
+        2. <b>数据平面（直连）</b>：发起方拿着 token 直接连目标设备的 WS 端口 → 目标设备验证 token 后开始推流 → 视频和键鼠数据不经过 Gateway<br><br>
+        <b>安全保障：</b>token 有 TTL（如 5 分钟），单次使用，绑定源/目标 IP。Gateway 虽然不看数据内容，但记录了「谁连了谁、什么时候、持续多久」。
+      </p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>方案</th><th>安全性</th><th>网关负载</th><th>延迟</th><th>复杂度</th><th>结论</th></tr>
+        <tr>
+          <td>全量走 Gateway</td>
+          <td><span class="tag t-green">最高</span></td>
+          <td><span class="tag t-red">极高</span></td>
+          <td>高（多一跳）</td>
+          <td>低</td>
+          <td>不可行（带宽爆炸）</td>
+        </tr>
+        <tr>
+          <td>P2P 无认证</td>
+          <td><span class="tag t-red">最低</span></td>
+          <td><span class="tag t-green">零</span></td>
+          <td>最低</td>
+          <td>低</td>
+          <td>不可行（无安全）</td>
+        </tr>
+        <tr>
+          <td><b>控制/数据分离</b></td>
+          <td><span class="tag t-orange">较高</span></td>
+          <td><span class="tag t-green">极低</span></td>
+          <td>低</td>
+          <td>中</td>
+          <td><span class="tag t-green">采纳</span></td>
+        </tr>
+      </table>
+    </div>
+    <p style="color:var(--dim);font-size:.85rem;margin-top:8px">类比：WebRTC 的信令服务器模式——信令走服务器，媒体流 P2P。我们的 Gateway 就是信令服务器。</p>
+  </div>
+
+  <!-- ===== Android MCP 选型 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> Android MCP Server：方案 B vs 方案 C</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">Android 端必须有 MCP（用户确认），以下两个方案详细对比。</p>
+
+    <div class="grid grid-2">
+      <div class="card" style="border-color:rgba(139,92,246,.3)">
+        <h4>方案 B：nodejs-mobile</h4>
+        <p style="font-size:.85rem;line-height:1.7;color:var(--text)">
+          <b>原理：</b>在 React Native App 内嵌入 Node.js 运行时（nodejs-mobile-react-native），TypeScript MCP Server 原封不动跑在内嵌 Node.js 里。<br><br>
+          <b>优点：</b><br>
+          - MCP Server 代码 100% 复用 TS 版，零重写<br>
+          - @modelcontextprotocol/sdk 原生支持<br>
+          - 开发效率最高，改一处全平台生效<br>
+          - 文件/进程/系统信息能力完整<br><br>
+          <b>缺点：</b><br>
+          - APK 增大约 15-25MB（Node.js 运行时体积）<br>
+          - nodejs-mobile 维护不活跃（需 fork 自维护）<br>
+          - Android 后台杀进程后 MCP 断线（需前台 service 保活）<br>
+          - RN Bridge 通信有性能开销<br>
+          - 需处理 Node.js 进程生命周期管理<br><br>
+          <b>适合：</b>快速验证，接受包体积代价
+        </p>
+      </div>
+      <div class="card" style="border-color:rgba(216,90,48,.3)">
+        <h4>方案 C：Rust 重写 MCP</h4>
+        <p style="font-size:.85rem;line-height:1.7;color:var(--text)">
+          <b>原理：</b>用 Rust 实现 MCP Server，编译为 .so 供 Android 调用，桌面端 Tauri 天然复用。<br><br>
+          <b>优点：</b><br>
+          - 全平台统一运行时，无 Node.js 依赖<br>
+          - APK 增小（~3-5MB Rust .so）<br>
+          - 性能更好，内存占用低<br>
+          - 后台稳定性好（原生 service）<br>
+          - Tauri 桌面端天然复用 Rust 代码<br><br>
+          <b>缺点：</b><br>
+          - MCP Server 要用 Rust 重写（工作量大，~2-3 周）<br>
+          - Rust MCP SDK 不成熟（需自建或基于 rmcp crate）<br>
+          - 开发效率低于 TS，迭代慢<br>
+          - RN 调 Rust 需 FFI（uniFFI / jni-rs）<br>
+          - 等于维护两套 MCP Server（TS + Rust）<br><br>
+          <b>适合：</b>长期投入，追求极致性能和稳定性
+        </p>
+      </div>
+    </div>
+
+    <div class="highlight" style="margin-top:16px">
+      <h4>推荐策略：B 先行，C 后补</h4>
+      <p>
+        <b>Phase 2</b>：用方案 B (nodejs-mobile) 快速验证 Android MCP 可行性，复用 TS 代码，2 周内出可用版本。<br>
+        <b>Phase 3+</b>：如果 Android 稳定性/性能成为问题，用方案 C (Rust) 重写。此时 Tauri 桌面端也在 Rust，可以共享 MCP Server 核心代码。<br><br>
+        <b>关键前提：</b>不管 B 还是 C，TS 版 MCP Server 先跑通 (Phase 1)，它是两种方案的验证基准和代码来源。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== exec 安全机制 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> exec 安全机制设计（不影响使用）</h2>
+    <div class="highlight">
+      <h4>分级审批：只读免审，写操作弹确认，危险命令拦截</h4>
+      <p>
+        目标：AI 正常执行只读命令无感知，但写入/删除/网络操作需要用户点确认。<br><br>
+        <b>第一级：白名单免审批（自动通过）</b><br>
+        只读命令：dir, ls, cat, tail, head, grep, find, type, echo, df, du, ps, tasklist, systeminfo, whoami, hostname, ipconfig, ifconfig, netstat, ping<br><br>
+        <b>第二级：弹确认（用户点"允许"才执行）</b><br>
+        写入操作：move, copy, del, rm, mkdir, rmdir, touch, chmod, chown, systemctl stop/start, docker stop/start, git push, npm install<br><br>
+        <b>第三级：直接拦截（记录到安全日志）</b><br>
+        危险命令：format, fdisk, dd, mkfs, shutdown（需走 power Tool）, reboot（需走 power Tool）, rm -rf /, :(){:|:&};:, curl|bash, wget|bash<br><br>
+        <b>用户体验：</b>90% 的日常操作（查文件、看日志、查磁盘）走白名单无感通过。只有真正有副作用的操作才弹确认，且确认可以通过聊天通道回复"允许"完成（Telegram/飞书里直接回消息）。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 总体判定 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 总体判定</h2>
+    <div class="highlight">
+      <h4>架构方向正确，范围已确认收窄，技术矛盾已逐项解决</h4>
+      <p>
+        GCA 的核心思路——"每台设备装 MCP Server 客户端，Gateway 统一调度，AI 自然语言操作"——在 MCP 生态日趋成熟的今天是合理的。<br><br>
+        <b>已确认的决策：</b><br>
+        1. OpenClaw 保留使用（重建成本太高）<br>
+        2. Phase 1 只做 Node.js CLI + 3 个 Tool (exec + file_list + sysinfo)<br>
+        3. 远程桌面用控制/数据分离方案（Gateway 认证 + 数据直连）<br>
+        4. exec 分三级审批，只读无感，写操作确认，危险拦截<br>
+        5. Android MCP 用方案 B 先验证，C 后补<br>
+        6. 外网穿透暂不讨论<br>
+        7. 文档迁移 VitePress + 保留 HTML 可视化
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 架构可行性 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 一、架构可行性逐项评估</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>评估项</th><th>可行性</th><th>依据</th></tr>
+        <tr>
+          <td>Gateway 作为 MCP Host</td>
+          <td><span class="feasibility-tag f-high">高</span></td>
+          <td>MCP 协议本身设计用于此场景。如果 OpenClaw 不可用，可用 Claude Desktop / 自建 MCP Host 替代</td>
+        </tr>
+        <tr>
+          <td>客户端暴露 MCP Server</td>
+          <td><span class="feasibility-tag f-high">高</span></td>
+          <td>@modelcontextprotocol/sdk 官方维护，TypeScript SDK 成熟，SSE 传输标准</td>
+        </tr>
+        <tr>
+          <td>聊天通道控制设备</td>
+          <td><span class="feasibility-tag f-high">高</span></td>
+          <td>微信/飞书/Telegram Bot API 成熟，OpenClaw 或自建 Bot 框架均可实现</td>
+        </tr>
+        <tr>
+          <td>跨设备文件操作</td>
+          <td><span class="feasibility-tag f-high">高</span></td>
+          <td>file_list/read/write/move/delete 是标准 fs 操作，Node.js 原生支持</td>
+        </tr>
+        <tr>
+          <td>跨设备命令执行</td>
+          <td><span class="feasibility-tag f-mid">需调整</span></td>
+          <td>技术可行，但安全风险高。必须有 allowlist + approval 机制，不能裸 exec</td>
+        </tr>
+        <tr>
+          <td>桌面客户端 (Tauri)</td>
+          <td><span class="feasibility-tag f-mid">需调整</span></td>
+          <td>Tauri v2 可行，但 MCP Server 是 TypeScript，在 Tauri 内需用 sidecar 方式运行 Node.js 进程，增加复杂度</td>
+        </tr>
+        <tr>
+          <td>Android 客户端 (React Native/Expo)</td>
+          <td><span class="feasibility-tag f-low">高风险</span></td>
+          <td>RN/Expo 无法直接运行 TypeScript MCP Server（需要 Node.js 运行时）。需 native module 或后端中转，技术方案不明确</td>
+        </tr>
+        <tr>
+          <td>远程桌面推流</td>
+          <td><span class="feasibility-tag f-mid">需调整</span></td>
+          <td>screenshot-desktop 跨平台有坑；MJPEG 推流可行但延迟和帧率受网络限制；P2P 直连绕过 Gateway 存在安全风险</td>
+        </tr>
+        <tr>
+          <td>AI 应用操控 (Accessibility API)</td>
+          <td><span class="feasibility-tag f-low">高风险</span></td>
+          <td>三套平台 API 各自独立，开发成本极高。建议用 Playwright 做浏览器自动化替代方案</td>
+        </tr>
+        <tr>
+          <td>跨通道记忆统一</td>
+          <td><span class="feasibility-tag f-high">高</span></td>
+          <td>identityLinks + MEMORY.md 是合理的身份/记忆方案。OpenClaw 如不支持可自建</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 文档内部矛盾 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 二、文档内部矛盾（交叉分析发现）</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">以下问题在单份文档中不易发现，但交叉对比后被识别出来。</p>
+
+    <div class="contradiction">
+      <h4>矛盾 1：技术栈双重定义</h4>
+      <p>
+        架构文档"实现细节"表中，同一功能列了 Node.js 和 Rust 两套实现：<br>
+        - 文件服务：Node.js <code>fs</code> / Rust <code>std::fs</code><br>
+        - 命令执行：<code>child_process</code> / Rust <code>std::process::Command</code><br>
+        - 屏幕捕获：<code>screenshot-desktop</code> (Node) / <code>screenshots</code> crate (Rust)<br>
+        - 系统信息：<code>systeminformation</code> (Node) / <code>sysinfo</code> crate (Rust)<br><br>
+        但技术栈表中写的是"Tauri v2 (Rust + React)"——Tauri 后端是 Rust，不应依赖 Node.js 包。
+        如果 MCP Server 核心是 TypeScript（用 <code>@modelcontextprotocol/sdk</code>），那在 Tauri 里需要 sidecar 跑 Node.js，这与"5MB 轻量客户端"矛盾。
+      </p>
+      <div class="where">来源：architecture/index.html 实现细节表 vs 技术方案表</div>
+    </div>
+
+    <div class="contradiction">
+      <h4>矛盾 2：Android 客户端技术盲区</h4>
+      <p>
+        架构文档说 Android 用"React Native + Expo"，MCP Server 核心是 TypeScript + <code>@modelcontextprotocol/sdk</code>。
+        但 React Native 环境没有完整的 Node.js 运行时，无法直接运行 MCP SDK（它依赖 Node.js 的 <code>http</code>/<code>child_process</code>/<code>fs</code> 等内置模块）。<br><br>
+        可能的解决方案：<br>
+        - 方案 A：Android 端不跑 MCP Server，改为通过 Gateway 中转（但这就不是"每台设备都暴露 MCP Server"了）<br>
+        - 方案 B：用 <code>nodejs-mobile</code> 或 <code>react-native-node</code> 在 App 内嵌 Node.js（但增加包体积、维护成本）<br>
+        - 方案 C：用 Rust 重写 MCP Server（但放弃了 TypeScript 统一）<br><br>
+        文档没有选择方案，这是一个未解决的技术决策。
+      </p>
+      <div class="where">来源：architecture/index.html 技术栈表 vs capabilities/index.html vs backlog/index.html P-004</div>
+    </div>
+
+    <div class="contradiction">
+      <h4>矛盾 3：远程桌面直连 vs 安全模型</h4>
+      <p>
+        flow/index.html 第 3 节描述"客户端与目标设备建立 WebSocket 直连（不经过 Gateway，低延迟）"。
+        但 security/index.html 的安全控制流程是 4 层防护全部经过 Gateway（身份验证→权限控制→执行沙箱→审计日志）。<br><br>
+        如果远程桌面是 P2P 直连，Gateway 的安全层就被绕过了。这意味着屏幕推流和键鼠输入完全不走审计，这和 security 文档自相矛盾。
+      </p>
+      <div class="where">来源：flow/index.html 第 3 节 vs security/index.html 安全控制流程</div>
+    </div>
+
+    <div class="contradiction">
+      <h4>矛盾 4：OTA 更新技术栈不匹配</h4>
+      <p>
+        架构文档 OTA 部分只提到了 expo-updates（Android/React Native），但项目结构中 Desktop 客户端是 Tauri。
+        backlog O-003 提到"Tauri updater：检查 latest.json → 后台下载 APK → 静默安装"——但 Tauri 不打 APK，打的是 .msi/.exe/.dmg。
+        "APK"是 Android 的安装包格式，不应出现在 Desktop 更新任务中。
+      </p>
+      <div class="where">来源：architecture/index.html OTA 策略 vs backlog/index.html O-003</div>
+    </div>
+  </div>
+
+  <!-- ===== 核心依赖风险 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--orange)"></span> 三、核心依赖风险评估</h2>
+    <div class="risk-matrix">
+      <div class="risk risk-critical">
+        <h4>OpenClaw — 未验证的核心依赖</h4>
+        <p>整个系统建立在 OpenClaw 之上（MCP Host、AI Agent、通道路由、记忆系统、设备配对、exec approval）。如果 OpenClaw 不可用、不稳定或 API 变更，全部受影响。</p>
+        <div class="fix"><strong>建议：</strong>Phase 0 先花 1-2 天验证 OpenClaw 是否真实可用。能跑通最简单的 MCP Server 注册 + AI 调用 + 消息回复闭环，再开始正式开发。如果不可用，考虑用 Claude Desktop + 自建消息路由替代。</div>
+      </div>
+      <div class="risk risk-high">
+        <h4>@modelcontextprotocol/sdk — 版本快速迭代</h4>
+        <p>MCP 协议本身在快速演进，SDK 版本间可能有 breaking change。</p>
+        <div class="fix"><strong>建议：</strong>锁定版本号，封装适配层，所有 Tool 调用经过一层抽象接口。升级时只改适配层。</div>
+      </div>
+      <div class="risk risk-high">
+        <h4>Tailscale — 国内可用性不确定</h4>
+        <p>文档标注 Tailscale "国内可能需要 DERP 中继、延迟高"，但客户端连接流程深度依赖 Tailscale（自动启停、状态检测）。</p>
+        <div class="fix"><strong>建议：</strong>Phase 1 不依赖 Tailscale，用局域网 IP + Telegram 通道。外网访问问题推迟到 Phase 3+，优先考虑 FRP（文档自己说"国内最佳"）。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 优化建议 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 四、优化建议（8 条 · 已标注决策）</h2>
+
+    <div class="recommendation">
+      <h4>1. 统一技术栈：选 Node.js CLI 客户端作为 Phase 1 唯一形态 <span class="tag t-green">已采纳</span></h4>
+      <p>
+        Phase 1 不做 Tauri 桌面客户端，也不做 Android。只做一个 Node.js CLI 客户端（<code>npx gca-cli start</code>），跑 MCP Server + 连接 Gateway。
+        原因：CLI 是 MCP Server 的原生形态（TypeScript + Node.js），不需要 sidecar、不需要 native module，开发效率最高。<br>
+        验证完核心闭环后，Phase 3 再用 Tauri 包一层 UI 上去。
+      </p>
+      <div class="impact"><strong>影响：</strong>砍掉 backlog P-001/P-004/P-005 的复杂度，Phase 1 开发量减半</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>2. Phase 1 从 10 个 Tool 砍到 3 个 <span class="tag t-green">已采纳</span></h4>
+      <p>
+        只做 <code>exec</code> + <code>file_list</code> + <code>sysinfo</code>。这三个覆盖了 PM 审查建议的"最小 MVP"（Telegram 发命令→执行→返回结果）。
+        其余 33 个 Tool 全部推迟。exec 分三级审批（只读免审/写操作确认/危险拦截）。
+      </p>
+      <div class="impact"><strong>影响：</strong>Phase 1 从 4 周缩到 2 周，先证明 AI→MCP→设备 这条链路能跑通</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>3. 远程桌面：控制/数据平面分离 <span class="tag t-orange">方案已调整</span></h4>
+      <p>
+        用户反馈：全量走 Gateway 对服务器和带宽要求太高。已调整为<b>控制平面走 Gateway + 数据平面直连</b>方案。
+        Gateway 管认证和审计（签发短期 token + 记录谁连了谁），数据流（视频/键鼠）用 token 加密直连，不经过 Gateway。
+        类比 WebRTC 信令服务器模式。详见上方「远程桌面方案」章节。
+      </p>
+      <div class="impact"><strong>影响：</strong>解决 flow vs security 矛盾，网关不背带宽，操作可审计</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>4. exec 安全审批机制 <span class="tag t-green">已采纳</span></h4>
+      <p>
+        分三级审批，不影响日常使用：<br>
+        - <b>白名单免审批</b>：只读命令（dir/ls/cat/tail/grep/df/ps 等）AI 直接执行，用户无感<br>
+        - <b>弹确认</b>：写操作（move/del/mkdir/systemctl stop/docker stop 等）需用户回复"允许"<br>
+        - <b>直接拦截</b>：危险命令（format/fdisk/rm -rf / / curl|bash）拒绝并记安全日志<br>
+        确认可通过聊天通道完成（Telegram/飞书里回消息即可）。
+      </p>
+      <div class="impact"><strong>影响：</strong>堵住最高风险——命令注入，90% 操作无感通过</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>5. Android MCP Server：方案 B 先行，C 后补 <span class="tag t-blue">已对比</span></h4>
+      <p>
+        用户确认 Android 本地必须有 MCP。方案 B (nodejs-mobile) 和方案 C (Rust) 优缺点详见上方对比。<br>
+        <b>决策：</b>Phase 2 用方案 B 快速验证（复用 TS 代码），如果稳定性/性能成问题，Phase 3+ 用方案 C 重写（此时 Tauri 也在 Rust，可共享）。
+        不做决策就开始 Android 开发 = 白做。
+      </p>
+      <div class="impact"><strong>影响：</strong>Phase 2 进入前已解决技术阻塞</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>6. FRP 替代 Tailscale <span class="tag t-gray">暂不讨论</span></h4>
+      <p>
+        用户反馈：当前阶段用不上外网穿透，暂搁置。Tailscale 定位为外网访问回内网的辅助工具，非核心架构。
+        等需要外网访问时再讨论 FRP vs Tailscale 方案。
+      </p>
+      <div class="impact"><strong>影响：</strong>暂不影响 Phase 1 开发</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>7. Phase 0 技术验证（POC）</h4>
+      <p>
+        在 Phase 1 正式开发前插入一个 1-2 天的 POC：<br>
+        - 手动注册一个最简 MCP Server 到 OpenClaw Gateway<br>
+        - 用 Telegram 发一条消息<br>
+        - AI 调用 exec 执行 <code>dir</code> 并返回结果<br>
+        OpenClaw 保留使用（重建成本太高），但 POC 仍需验证其基础 MCP 能力是否可用。
+      </p>
+      <div class="impact"><strong>影响：</strong>用 2 天验证核心可行性，确认 OpenClaw 基础能力</div>
+    </div>
+
+    <div class="recommendation">
+      <h4>8. 文档迁移到 VitePress + 保留 HTML 可视化 <span class="tag t-green">已采纳</span></h4>
+      <p>
+        9 个手写 HTML 改一个样式要改 9 遍。迁移到 VitePress 后用 Markdown 写内容，主题统一切换，自带搜索。
+        迁移完成后，同时生成一个 HTML 可视化版本（用户喜欢看可视化效果）。
+      </p>
+      <div class="impact"><strong>影响：</strong>长期维护成本降低 + 保留可视化体验</div>
+    </div>
+  </div>
+
+  <!-- ===== 修订路线图 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> 五、建议修订后的路线图</h2>
+    <div class="phase-compare">
+      <div class="col before">
+        <h4><span class="tag t-red">原计划</span> 28 周（实际需 2-3 年）</h4>
+        <ul>
+          <li>Phase 1 (4 周): 10 个 MCP Tool + Windows 客户端 + 聊天通道</li>
+          <li>Phase 2 (6 周): Android + 远程控制</li>
+          <li>Phase 3 (6 周): 桌面客户端 + AI 操控</li>
+          <li>Phase 4 (6 周): IoT + 智能家居</li>
+          <li>Phase 5 (6 周): 安全加固 + 发布</li>
+        </ul>
+      </div>
+      <div class="col after">
+        <h4><span class="tag t-green">建议</span> 12 周拿到可用产品</h4>
+        <ul>
+          <li>Phase 0 (2 天): POC 验证 OpenClaw + MCP 闭环</li>
+          <li>Phase 1 (2 周): 3 个 Tool + CLI 客户端 + Telegram + Windows</li>
+          <li>Phase 2 (4 周): 扩展到 10 个 Tool + 多通道 + 日志/重连</li>
+          <li>Phase 3 (6 周): 多设备 + CLI 适配 Linux + 文件传输</li>
+          <li>Phase 4+: 按实际使用反馈决定（远程桌面 / Android / IoT）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight">
+      <h4>核心原则：先跑通，再完善</h4>
+      <p>
+        Phase 1 的唯一目标是验证"用户发消息→AI 理解→MCP 调用→设备执行→返回结果"这条链路。<br>
+        3 个 Tool 足够证明链路通畅。10 个 Tool 只是让链路更长更宽，但链路本身没变。<br>
+        先用 3 个 Tool 跑通 2 周，再花 4 周扩到 10 个。不要一开始就铺 36 个。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 结论 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 六、结论</h2>
+    <div class="grid grid-2">
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <h4>做对了什么</h4>
+        <p style="font-size:.85rem;line-height:1.7">
+          - 架构选型合理：MCP 是当前最合适的"设备能力暴露"协议<br>
+          - 文档覆盖全面：9 份文档从架构到维护到 PM 审查，个人项目能做到这个程度很少见<br>
+          - PM 工具包设计精巧：WIE 框架、澄清问题清单、验收标准模板都有实战价值<br>
+          - 自我审查意识强：PM 审查和维护文档已经识别了大部分问题
+        </p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.3)">
+        <h4>需要改什么</h4>
+        <p style="font-size:.85rem;line-height:1.7">
+          - 技术栈必须做取舍：Node.js CLI 优先，Tauri/Android 推后<br>
+          - OpenClaw 必须先验证：2 天 POC，跑不通就换方案<br>
+          - 范围必须砍：Phase 1 从 10 Tool 降到 3 Tool，2 周出 MVP<br>
+          - 安全机制必须落地：exec allowlist 不是"建议"而是"必须"<br>
+          - 远程桌面 P2P 直连方案必须改：走 Gateway 中转
+        </p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;border-color:rgba(59,130,246,.3)">
+      <h4>最终建议</h4>
+      <p style="font-size:.9rem;line-height:1.8">
+        <b>不要再写文档了。</b> 当前文档质量已经足够支撑开发，继续优化文档的边际收益很低。<br>
+        下一步应该是：花 2 天做 Phase 0 POC，验证 OpenClaw + MCP 能跑通最小闭环。如果跑通了，Phase 1 的 2 周开发就水到渠成。如果跑不通，根据原因调整方案再出发。<br><br>
+        <b>代码是最好的文档。一个能跑的 POC 胜过 100 页设计文档。</b>
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">返回首页</a> &nbsp;|&nbsp;
+  <a href="optimization/index.html">优化方案</a> &nbsp;|&nbsp;
+  <a href="pm-review/index.html">PM 审查</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

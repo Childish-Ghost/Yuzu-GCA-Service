@@ -1,0 +1,7 @@
+{
+  "name": "gca-approval",
+  "version": "0.1.0",
+  "description": "GCA 审批卡片回调中转：飞书卡片按钮 → gca-server /ops/card-action（零业务逻辑）",
+  "main": "index.js",
+  "license": "MIT"
+}

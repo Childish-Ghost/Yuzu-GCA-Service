@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.3.0",
+  "name": "B0.3.0",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.3.0（测试版）· 2026-08-12\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.3.0** · agent+term **0.2.0** · server **0.3.0**\n\n### 变更\n- 真终端全链路（ConPTY + SSE 流式 + vte 渲染）\n- 全项目安全审查修复（JSON 崩溃 DoS / SSRF / XSS / 审批绕过 / file_read panic 等）\n- IP 心跳自愈 + Windows 安装程序（NSIS）+ 服务端包\n\n### 交付物\n- **gca-setup-0.3.0.exe** — Windows 安装程序\n- **gca-server-0.3.0.zip** — 服务端\n\n### 已知限制\n- 历史产物名保留（新命名自 B0.4.0 起生效）"
+}

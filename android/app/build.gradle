@@ -1,0 +1,69 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.gca.client'
+    compileSdk 36
+    ndkVersion '27.1.12297006'
+
+    defaultConfig {
+        applicationId 'com.gca.client'
+        minSdk 24
+        targetSdk 36
+        versionCode 3
+        versionName '0.3.0'
+        ndk {
+            // x86 供 Android 7（API 24）旧模拟器验证低版本 MediaProjection 分支
+            abiFilters 'arm64-v8a', 'x86_64', 'x86'
+        }
+        // nodejs-mobile 壳已移除（Android 原生化 P1）——Rust agent 的
+        // libgca_agent.so 经 jniLibs 打包（build-rust-native.cmd 生成），无 CMake
+    }
+
+    signingConfigs {
+        release {
+            // keystore 不入库（android/gca-release.jks）；密码走环境变量 GCA_KEYSTORE_PASS
+            // （构建时注入，仓库零密码；密码副本在 %APPDATA%\GCA Desktop\keystore-pass.txt）
+            // 空密码时仅 release 签名失败（Gradle 配置阶段全量求值，不能在脚本顶层 throw——会拦 debug 构建）
+            def pass = System.getenv('GCA_KEYSTORE_PASS') ?: ''
+            storeFile file('../gca-release.jks')
+            storePassword pass
+            keyAlias 'gca'
+            keyPassword pass
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation('androidx.appcompat:appcompat:1.7.0') {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+    }
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+    // 审批生物识别（2026-08-14 App 审批）
+    implementation 'androidx.biometric:biometric:1.1.0'
+    // 审批卡片流（2026-08-14）：ViewPager2 左右滑动切换多条审批
+    implementation 'androidx.viewpager2:viewpager2:1.1.0'
+    // 审查 A-M9（2026-08-14）：owner token 加密存储（EncryptedSharedPreferences）
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+}

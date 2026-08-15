@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">GCA Screen Capture — 开启后可通过 AI 远程截屏，无需每次授权</string>
+</resources>

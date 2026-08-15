@@ -1,0 +1,241 @@
+/* GCA Docs - Custom Dark Theme */
+/* Matches the original hand-written HTML style */
+/* 只在 html.dark 下覆盖变量，避免浅色模式变量冲突 */
+
+html.dark {
+  --vp-c-bg: #0f172a;
+  --vp-c-bg-alt: #1e293b;
+  --vp-c-bg-elv: #1e293b;
+  --vp-c-border: #334155;
+  --vp-c-divider: #334155;
+  --vp-c-text-1: #e2e8f0;
+  --vp-c-text-2: #94a3b8;
+  --vp-c-text-3: #64748b;
+
+  --vp-c-brand-1: #3b82f6;
+  --vp-c-brand-2: #8b5cf6;
+  --vp-c-brand-3: #06b6d4;
+  --vp-c-brand-soft: rgba(59, 130, 246, 0.15);
+
+  --vp-c-green: #22c55e;
+  --vp-c-orange: #f59e0b;
+  --vp-c-red: #ef4444;
+  --vp-c-pink: #ec4899;
+  --vp-c-teal: #14b8a6;
+  --vp-c-lime: #84cc16;
+  --vp-c-sky: #0ea5e9;
+  --vp-c-amber: #f59e0b;
+
+  --vp-font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --vp-font-family-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+/* Body background */
+body {
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+  line-height: 1.6;
+}
+
+/* Hero */
+.VPHero .name {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cards / Containers */
+.vp-doc .custom-block {
+  border-radius: 14px;
+}
+
+.vp-doc .custom-block.tip {
+  border-color: rgba(59, 130, 246, 0.25);
+  background-color: rgba(59, 130, 246, 0.06);
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .custom-block.warning {
+  border-color: rgba(245, 158, 11, 0.25);
+  background-color: rgba(245, 158, 11, 0.06);
+}
+
+.vp-doc .custom-block.danger {
+  border-color: rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.06);
+}
+
+/* Tables */
+.vp-doc table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  display: table;
+  width: 100%;
+  overflow: hidden;
+}
+
+.vp-doc th {
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 2px solid var(--vp-c-border);
+  color: var(--vp-c-brand-1);
+  padding: 10px 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.vp-doc td {
+  border-bottom: 1px solid var(--vp-c-border);
+  color: var(--vp-c-text-2);
+  padding: 10px 14px;
+}
+
+.vp-doc tr:hover td {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.vp-doc td:first-child {
+  color: var(--vp-c-text-1);
+  font-weight: 500;
+}
+
+/* Code blocks */
+.vp-doc pre {
+  background: #0d1117;
+  border: 1px solid var(--vp-c-border);
+  border-radius: 12px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.vp-doc code {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.85em;
+}
+
+.vp-doc :not(pre) > code {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--vp-c-brand-1);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* Diagram blocks (pre with language-text) */
+.vp-doc .language-text pre {
+  background: #1e293b;
+  border: 1px solid var(--vp-c-border);
+  border-radius: 14px;
+  padding: 20px;
+  font-size: 0.76rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Headings */
+.vp-doc h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  border-bottom: none;
+}
+
+.vp-doc h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--vp-c-border);
+  padding-bottom: 0.5rem;
+}
+
+.vp-doc h3 {
+  font-size: 1rem;
+  color: var(--vp-c-brand-2);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Links */
+.vp-doc a {
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+}
+
+.vp-doc a:hover {
+  text-decoration: underline;
+}
+
+/* Badge styles */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.badge-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge-orange {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.badge-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.badge-purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.badge-pink {
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.badge-cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+}
+
+/* Nav */
+.VPNav {
+  background-color: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--vp-c-border);
+}
+
+/* Sidebar */
+.VPSidebar {
+  background-color: var(--vp-c-bg-alt);
+  border-right: 1px solid var(--vp-c-border);
+}
+
+/* Home features */
+.VPFeatures .container {
+  max-width: 1200px;
+}
+
+.VPFeature {
+  background-color: var(--vp-c-bg-alt);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 14px;
+}
+
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
+}

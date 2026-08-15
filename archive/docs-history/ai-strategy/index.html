@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 模型策略 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.plan-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;transition:all .3s}
+.plan-card:hover{border-color:var(--accent)}
+.plan-card.plan-a{border-left:4px solid var(--accent)}
+.plan-card.plan-b{border-left:4px solid var(--accent2)}
+.plan-card h3{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.plan-badge{font-size:.72rem;padding:3px 10px;border-radius:10px;font-weight:600}
+.badge-a{background:rgba(59,130,246,.15);color:var(--accent)}
+.badge-b{background:rgba(139,92,246,.15);color:var(--accent2)}
+.badge-rec{background:rgba(34,197,94,.15);color:var(--green)}
+.flow-diagram{background:#0d1117;border:1px solid var(--border);border-radius:12px;padding:20px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;font-size:.76rem;line-height:1.8;overflow-x:auto;white-space:pre;margin-bottom:16px}
+.flow-diagram .hl{color:var(--accent);font-weight:700}
+.flow-diagram .hi{color:var(--pink);font-weight:700}
+.flow-diagram .gr{color:var(--green);font-weight:700}
+.flow-diagram .pu{color:var(--accent2);font-weight:700}
+.flow-diagram .dim{color:var(--dim)}
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.pc-box{border-radius:10px;padding:14px}
+.pc-pro{background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.15)}
+.pc-con{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15)}
+.pc-box h5{font-size:.8rem;margin-bottom:8px}
+.pc-pro h5{color:var(--green)}
+.pc-con h5{color:var(--red)}
+.pc-box ul{list-style:none;padding:0;margin:0}
+.pc-box li{font-size:.8rem;color:var(--dim);padding:4px 0;padding-left:16px;position:relative}
+.pc-box li::before{content:'';width:5px;height:5px;border-radius:50%;position:absolute;left:4px;top:11px}
+.pc-pro li::before{background:var(--green)}
+.pc-con li::before{background:var(--red)}
+@media(max-width:768px){.pros-cons{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="../architecture/index.html">架构</a><span class="sep">/</span>
+  <span class="current">AI 模型策略</span>
+</div>
+
+<div class="container">
+  <h1>AI 模型策略</h1>
+  <p class="subtitle">DeepSeek V4 API 尚未开放图片能力 — 双方案并存，按场景自动路由</p>
+
+  <!-- ===== 背景 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--orange)"></span> 背景与约束</h2>
+    <div class="highlight">
+      <h4>核心矛盾</h4>
+      <p>
+        DeepSeek V4（2026年4月发布）在 App/Web 端已灰度上线"识图模式"，支持图片理解。<br>
+        但 <b>V4 API 仍然是纯文本接口</b> — 旧版 <code>deepseek-chat</code> / <code>deepseek-reasoner</code> 将于 2026年7月24日停用，新 API <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code> 也<b>尚未开放图片输入参数</b>。<br><br>
+        GCA 需要让 AI "看到"远程设备屏幕，但主力模型看不了图。<br>
+        解决思路：<b>方案 A 用两个模型配合（大脑+眼睛），方案 B 换一个能看图的多模态模型</b>。
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>模型</th><th>多模态 API</th><th>OpenClaw 原生</th><th>上下文</th><th>价格（输入/输出）</th><th>开源</th><th>定位</th></tr>
+        <tr>
+          <td><b>DeepSeek V4-Flash</b></td>
+          <td><span class="tag t-red">无</span></td>
+          <td><span class="tag t-green">是</span></td>
+          <td>1M</td>
+          <td>极低（GPT-5.5 的 1.55‰）</td>
+          <td><span class="tag t-green">MIT</span></td>
+          <td>推理大脑</td>
+        </tr>
+        <tr>
+          <td><b>DeepSeek V4-Pro</b></td>
+          <td><span class="tag t-red">无</span></td>
+          <td><span class="tag t-green">是</span></td>
+          <td>1M</td>
+          <td>低</td>
+          <td><span class="tag t-green">MIT</span></td>
+          <td>深度推理</td>
+        </tr>
+        <tr>
+          <td><b>MiMo-V2.5</b></td>
+          <td><span class="tag t-green">图+视频+音频</span></td>
+          <td><span class="tag t-orange">需配置</span></td>
+          <td>1M</td>
+          <td>$1 / $3 per M</td>
+          <td><span class="tag t-green">MIT</span></td>
+          <td>全模态 Agent</td>
+        </tr>
+        <tr>
+          <td><b>MiniMax-M3</b></td>
+          <td><span class="tag t-green">图+视频</span></td>
+          <td><span class="tag t-green">是</span></td>
+          <td>1M</td>
+          <td>$0.30 / $1.20 per M</td>
+          <td><span class="tag t-red">闭源</span></td>
+          <td>多模态 Agent</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 方案 A ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 方案 A：双模型架构</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">DeepSeek V4 做大脑（推理+工具调用），视觉模型做眼睛（截图转结构化文本）。两步分离，各司其职。</p>
+
+    <div class="plan-card plan-a">
+      <h3>
+        <span class="plan-badge badge-a">方案 A</span>
+        <span class="plan-badge badge-rec">推荐 — 性价比最优</span>
+      </h3>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>角色</th><th>模型</th><th>职责</th><th>API</th><th>价格</th></tr>
+          <tr>
+            <td><b>大脑</b></td>
+            <td>DeepSeek V4-Flash</td>
+            <td>对话推理、工具调用、决策</td>
+            <td>OpenAI 兼容</td>
+            <td>极低</td>
+          </tr>
+          <tr>
+            <td><b>眼睛</b></td>
+            <td>MiMo-V2.5 <span class="tag t-orange">备选: MiniMax-M3</span></td>
+            <td>截图理解，输出结构化描述</td>
+            <td>OpenAI 兼容</td>
+            <td>$1/$3 per M</td>
+          </tr>
+        </table>
+      </div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">工作流程</h4>
+      <div class="flow-diagram"><span class="dim">用户指令："帮我看下服务器桌面上有什么文件"</span>
+
+  <span class="gr">Step 1</span>  screen_capture("cloud-svr")
+           │
+           ▼  WebP 截图 (~30KB, 512px)
+
+  <span class="pu">Step 2</span>  截图 → 视觉模型 (MiMo-V2.5)
+           │  prompt: "描述屏幕内容，列出所有可见元素"
+           ▼  返回结构化文本
+
+  <span class="hl">Step 3</span>  结构化文本 + 用户指令 → DeepSeek V4-Flash
+           │  "桌面上有 3 个 PDF: report.pdf, invoice.pdf, spec.pdf"
+           │  推理: 用户可能想看文件列表
+           ▼  决策: 调用 file_list("cloud-svr", "~/Desktop")
+
+  <span class="gr">Step 4</span>  file_list 执行 → 返回结果 → DeepSeek 组织回复</div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">关键优化：视觉描述缓存</h4>
+      <div class="highlight">
+        <p>
+          屏幕没变就不重新理解。<code>screen_capture</code> 返回图片 hash，与上次对比：
+          <br>- hash 相同 → 直接用缓存的视觉描述，跳过 Step 2（省 1 次 API 调用）
+          <br>- hash 不同 → 重新调用视觉模型
+          <br><br>
+          典型场景：AI 正在执行多步操作，中间多次截图，但屏幕内容未变 → 只需 1 次视觉理解。
+        </p>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pc-box pc-pro">
+          <h5>优点</h5>
+          <ul>
+            <li>DeepSeek V4-Flash 推理极强（Codeforces 3206），Agent 能力榜首</li>
+            <li>总成本极低 — V4-Flash 价格碾压级，视觉模型只在看图时调用</li>
+            <li>视觉模型可独立替换 — MiMo/MiniMax/Qwen-VL 随时切换</li>
+            <li>视觉描述可缓存 — 屏幕没变不重新理解</li>
+            <li>纯文本任务（命令行/系统管理）完全不调视觉模型，零额外成本</li>
+          </ul>
+        </div>
+        <div class="pc-box pc-con">
+          <h5>缺点</h5>
+          <ul>
+            <li>看图时需 2 次 API 调用，延迟 +1-2s</li>
+            <li>文本转换有信息损失 — 复杂图像/动画/颜色难以完整描述</li>
+            <li>需要维护两个模型的 API Key 和配置</li>
+            <li>视觉模型理解质量直接影响 AI 决策质量</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">OpenClaw 配置</h4>
+      <div class="code-block">
+        <span class="lang">~/.openclaw/openclaw.json — 方案 A</span>
+<pre>{
+  <span class="comment">// 主模型 — 推理大脑</span>
+  <span class="key">"agent"</span>: {
+    <span class="key">"model"</span>: <span class="str">"deepseek/deepseek-v4-flash"</span>,
+    <span class="key">"apiKey"</span>: <span class="str">"${DEEPSEEK_API_KEY}"</span>
+  },
+
+  <span class="comment">// 视觉模型 — 眼睛（通过 MCP Tool 内部调用，非 OpenClaw 直配）</span>
+  <span class="comment">// 配置在 GCA MCP Server 的环境变量中</span>
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"home-pc"</span>: {
+      <span class="key">"url"</span>: <span class="str">"http://192.168.1.100:3001/sse"</span>,
+      <span class="key">"env"</span>: {
+        <span class="key">"VISION_MODEL"</span>: <span class="str">"mimo-v2.5"</span>,
+        <span class="key">"VISION_API_KEY"</span>: <span class="str">"${MIMO_API_KEY}"</span>,
+        <span class="key">"VISION_BASE_URL"</span>: <span class="str">"https://api.xiaomimimo.com/v1"</span>
+      }
+    }
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 方案 B ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent2)"></span> 方案 B：多模态单模型架构</h2>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:.9rem">直接用多模态模型，一步到位看图+推理+决策。少一次 API 调用，无信息损失。</p>
+
+    <div class="plan-card plan-b">
+      <h3>
+        <span class="plan-badge badge-b">方案 B</span>
+        <span class="plan-badge badge-a">GUI 操控场景更优</span>
+      </h3>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>角色</th><th>模型（二选一）</th><th>职责</th><th>API</th><th>价格</th></tr>
+          <tr>
+            <td><b>大脑+眼睛</b></td>
+            <td>MiMo-V2.5 <span class="tag t-green">推荐</span></td>
+            <td>直接看图 + 推理 + 工具调用</td>
+            <td>OpenAI 兼容</td>
+            <td>$1/$3 per M</td>
+          </tr>
+          <tr>
+            <td><b>大脑+眼睛</b></td>
+            <td>MiniMax-M3</td>
+            <td>同上，OpenClaw 原生支持</td>
+            <td>OpenAI/Anthropic</td>
+            <td>$0.30/$1.20 per M</td>
+          </tr>
+        </table>
+      </div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">工作流程</h4>
+      <div class="flow-diagram"><span class="dim">用户指令："帮我看下服务器桌面上有什么文件"</span>
+
+  <span class="gr">Step 1</span>  screen_capture("cloud-svr")
+           │
+           ▼  WebP 截图 (~30KB, 512px)
+
+  <span class="pu">Step 2</span>  截图 + 用户指令 → 多模态模型 (MiMo-V2.5)
+           │  模型直接"看"屏幕:
+           │  "桌面上有 3 个 PDF: report.pdf, invoice.pdf, spec.pdf"
+           │  推理: 用户可能想看文件列表
+           ▼  决策: 调用 file_list("cloud-svr", "~/Desktop")
+
+  <span class="gr">Step 3</span>  file_list 执行 → 返回结果 → 模型组织回复</div>
+
+      <div class="pros-cons">
+        <div class="pc-box pc-pro">
+          <h5>优点</h5>
+          <ul>
+            <li>单次 API 调用，延迟低</li>
+            <li>无信息损失 — 原生视觉理解，能看到颜色/布局/动画</li>
+            <li>GUI 操控更精准 — 能直接看到按钮位置、输入框状态</li>
+            <li>配置简单 — 只需一个模型 API Key</li>
+            <li>MiMo-V2.5 原生 Agent 能力 + Browser Use，天生适合操控场景</li>
+          </ul>
+        </div>
+        <div class="pc-box pc-con">
+          <h5>缺点</h5>
+          <ul>
+            <li>纯文本推理能力可能弱于 DeepSeek V4</li>
+            <li>每次调用都含图片 token，成本高于方案 A 的纯文本调用</li>
+            <li>MiMo 需在 OpenClaw 中自定义 Provider（OpenAI 兼容 endpoint）</li>
+            <li>MiniMax 闭源，长期依赖第三方</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">OpenClaw 配置（MiMo-V2.5）</h4>
+      <div class="code-block">
+        <span class="lang">~/.openclaw/openclaw.json — 方案 B (MiMo)</span>
+<pre>{
+  <span class="comment">// 主模型 — 多模态，直接看图</span>
+  <span class="key">"agent"</span>: {
+    <span class="key">"model"</span>: <span class="str">"mimo-v2.5"</span>,
+    <span class="key">"baseUrl"</span>: <span class="str">"https://api.xiaomimimo.com/v1"</span>,
+    <span class="key">"apiKey"</span>: <span class="str">"${MIMO_API_KEY}"</span>
+  },
+
+  <span class="comment">// MCP Server 配置（无需视觉模型环境变量）</span>
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"home-pc"</span>: {
+      <span class="key">"url"</span>: <span class="str">"http://192.168.1.100:3001/sse"</span>
+    }
+  }
+}</pre>
+      </div>
+
+      <h4 style="margin:20px 0 10px;font-size:.9rem">OpenClaw 配置（MiniMax-M3 备选）</h4>
+      <div class="code-block">
+        <span class="lang">~/.openclaw/openclaw.json — 方案 B (MiniMax)</span>
+<pre>{
+  <span class="comment">// MiniMax 在 OpenClaw 中原生支持</span>
+  <span class="key">"agent"</span>: {
+    <span class="key">"model"</span>: <span class="str">"minimax/MiniMax-M3"</span>,
+    <span class="key">"apiKey"</span>: <span class="str">"${MINIMAX_API_KEY}"</span>
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 推荐：双方案并存 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 推荐：双方案并存，按场景自动路由</h2>
+
+    <div class="highlight">
+      <h4>不是二选一，而是共存</h4>
+      <p>
+        GCA 的 MCP Server 同时支持两套屏幕理解路径。<br>
+        OpenClaw AI Agent 根据任务类型<b>自动选择</b>调用哪个 Tool：
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>任务类型</th><th>走哪个方案</th><th>调用链路</th><th>原因</th></tr>
+        <tr>
+          <td><b>命令行 / 系统管理</b></td>
+          <td><span class="tag t-blue">方案 A</span></td>
+          <td>DeepSeek V4-Flash 直接处理</td>
+          <td>不需要看图，纯文本推理，V4-Flash 最强最便宜</td>
+        </tr>
+        <tr>
+          <td><b>文件操作 / 日志查看</b></td>
+          <td><span class="tag t-blue">方案 A</span></td>
+          <td>DeepSeek V4-Flash 直接处理</td>
+          <td>同上，结构化数据 V4 足够</td>
+        </tr>
+        <tr>
+          <td><b>GUI 操作 / 按钮点击</b></td>
+          <td><span class="tag t-purple">方案 B</span></td>
+          <td>多模态模型直接看图</td>
+          <td>需要看屏幕布局，判断按钮位置和状态</td>
+        </tr>
+        <tr>
+          <td><b>远程桌面操控</b></td>
+          <td><span class="tag t-purple">方案 B</span></td>
+          <td>多模态模型看图 + 推理</td>
+          <td>需要视觉判断，颜色/图标/动画</td>
+        </tr>
+        <tr>
+          <td><b>故障排查（看日志+看屏幕）</b></td>
+          <td><span class="tag t-blue">方案 A</span></td>
+          <td>ui_tree + DeepSeek V4</td>
+          <td>结构化 UI 信息足够，不需要视觉理解</td>
+        </tr>
+        <tr>
+          <td><b>网页操作</b></td>
+          <td><span class="tag t-purple">方案 B</span></td>
+          <td>多模态看图 / browser_act</td>
+          <td>需要看页面渲染效果</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>Agent 决策路径</h3>
+    <div class="highlight" style="margin-bottom:16px">
+      <p>
+        <b>不是问用户"走哪个方案"，而是由 openclaw.json 中配置的主模型决定可用路径。</b><br>
+        Agent 收到用户指令后，主模型自主分析意图、选择工具、执行操作，全程零人工介入。
+      </p>
+    </div>
+
+    <div class="flow-diagram"><span class="dim">AI Agent 收到用户指令后的完整决策路径：</span>
+
+  <span class="hl">用户发送指令</span>（飞书消息 / CLI）
+  "帮我看下服务器桌面上有什么文件"
+       │
+       ▼
+  <span class="hl">OpenClaw AI Agent 接收</span>
+       │  读取 openclaw.json → 确定主模型
+       │  ┌─────────────────────────────────────┐
+       │  │ 方案A: deepseek-v4-flash (纯文本)   │
+       │  │ 方案B: mimo-v2.5 (多模态)            │
+       │  └─────────────────────────────────────┘
+       ▼
+  <span class="hl">主模型分析指令意图</span>
+       │  输入：用户指令 + 可用 MCP Tool 列表
+       │  推理："用户想知道桌面文件 → 需要文件信息"
+       │  决策：选择调用哪个 Tool
+       │
+       ├─────────────────┬──────────────────┬────────────────────┐
+       │                 │                  │                    │
+       ▼                 ▼                  ▼                    ▼
+  <span class="dim">纯文本任务</span>   <span class="dim">结构化UI</span>      <span class="dim">视觉理解</span>          <span class="dim">直接执行</span>
+  命令行/系统管理   窗口/菜单/按钮    需要看到屏幕          已知明确操作
+       │                 │                  │                    │
+       ▼                 ▼                  ▼                    ▼
+  exec()            ui_tree()          screen_capture()    remote_input()
+  file_list()       (免费,本地)        (WebP ~30KB)        clipboard_sync()
+  sysinfo()         <100ms             + hash 变化检测
+       │                 │                  │
+       │                 │            ┌─────┴──────────────────┐
+       │                 │            │                        │
+       │                 │            ▼                        ▼
+       │                 │     <span class="pu">主模型是多模态？</span>
+       │                 │       (由配置决定，不问用户)
+       │                 │            │
+       │                 │     ┌────────┴────────┐
+       │                 │     │                 │
+       │                 │     ▼ 方案A           ▼ 方案B
+       │                 │  screen_describe    image content
+       │                 │  内部调视觉模型      直接返回主模型
+       │                 │  截图→MiMo→文本    主模型直接看图
+       │                 │  (多1-2s延迟)       (无信息损失)
+       │                 │     │                 │
+       └─────────────────┴─────┴─────────────────┘
+                         │
+                         ▼
+               <span class="gr">主模型拿到信息，推理决策</span>
+                         │
+                  ┌──────┴──────┐
+                  │             │
+                  ▼             ▼
+            需要更多操作？    信息足够回复
+                  │             │
+                  ▼             ▼
+            继续调用工具    组织最终回复
+            (多步循环)      → 飞书消息返回用户</div>
+
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <tr><th>阶段</th><th>谁在做决策</th><th>决策依据</th><th>用户参与</th></tr>
+        <tr>
+          <td>接收指令</td>
+          <td>OpenClaw Agent</td>
+          <td>用户输入的文本</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>意图分析</td>
+          <td><b>主模型</b>（V4-Flash / MiMo）</td>
+          <td>指令语义 + 可用 Tool 列表</td>
+          <td><span class="tag t-green">无</span></td>
+        </tr>
+        <tr>
+          <td>工具选择</td>
+          <td><b>主模型</b></td>
+          <td>Tool 描述 + 指令匹配</td>
+          <td><span class="tag t-green">无</span></td>
+        </tr>
+        <tr>
+          <td>视觉路径</td>
+          <td>openclaw.json 配置</td>
+          <td>主模型类型（纯文本→方案A / 多模态→方案B）</td>
+          <td><span class="tag t-green">无</span>（启动前配好）</td>
+        </tr>
+        <tr>
+          <td>多步循环</td>
+          <td><b>主模型</b></td>
+          <td>上一步结果 + 剩余目标</td>
+          <td><span class="tag t-green">无</span></td>
+        </tr>
+        <tr>
+          <td>最终回复</td>
+          <td><b>主模型</b></td>
+          <td>所有执行结果汇总</td>
+          <td>收到结果</td>
+        </tr>
+      </table>
+    </div>
+
+    <h4 style="margin:16px 0 10px;font-size:.9rem">关键：视觉路径由配置决定，不由指令决定</h4>
+    <div class="highlight">
+      <p>
+        同一条指令"帮我点那个蓝色按钮"，在两种配置下走不同路径：
+      </p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>配置</th><th>主模型</th><th>Agent 调用链</th><th>谁"看"屏幕</th></tr>
+          <tr>
+            <td><span class="tag t-blue">方案 A</span></td>
+            <td>DeepSeek V4-Flash</td>
+            <td><code>screen_capture</code> → MCP Server 内部调 MiMo → 返回结构化文本 → V4-Flash 推理 → <code>remote_input</code></td>
+            <td>MiMo（眼睛）<br>V4-Flash（大脑）</td>
+          </tr>
+          <tr>
+            <td><span class="tag t-purple">方案 B</span></td>
+            <td>MiMo-V2.5</td>
+            <td><code>screen_capture</code> → image content 直接返回 → MiMo 看图 + 推理 → <code>remote_input</code></td>
+            <td>MiMo（眼睛+大脑合一）</td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin-top:12px">
+        Agent 不需要知道"我该走方案 A 还是 B"——它只是调用 <code>screen_capture</code> 工具，<br>
+        MCP Server 根据自身配置决定返回 image（方案 B）还是调用视觉模型转文本（方案 A）。<br>
+        对 Agent 来说，<b>无论哪个方案，它调用的都是同一个 Tool</b>。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 屏幕截图优化 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--pink)"></span> 屏幕截图优化（两方案共用）</h2>
+
+    <div class="highlight">
+      <h4>从 base64 JPEG 到 WebP MCP image — 效率提升 10 倍+</h4>
+      <p>
+        旧方案：<code>screenshot</code> 返回 base64 JPEG（1920x1080 ~400KB）<br>
+        新方案：<code>screen_capture</code> 返回 MCP <code>image</code> content type（WebP 512px ~30KB）
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>维度</th><th>旧方案 (screenshot)</th><th>新方案 (screen_capture)</th><th>提升</th></tr>
+        <tr>
+          <td>格式</td>
+          <td>JPEG base64</td>
+          <td>WebP（MCP image content type）</td>
+          <td><span class="tag t-green">原生支持</span></td>
+        </tr>
+        <tr>
+          <td>分辨率</td>
+          <td>1920x1080 原始</td>
+          <td>512px 自适应（长边）</td>
+          <td><span class="tag t-green">按需缩放</span></td>
+        </tr>
+        <tr>
+          <td>体积</td>
+          <td>~400KB</td>
+          <td>~30KB</td>
+          <td><span class="tag t-green">13x 压缩</span></td>
+        </tr>
+        <tr>
+          <td>Token 消耗</td>
+          <td>~1200 tokens（base64 编码膨胀）</td>
+          <td>~300 tokens（WebP 直接传递）</td>
+          <td><span class="tag t-green">4x 节省</span></td>
+        </tr>
+        <tr>
+          <td>变化检测</td>
+          <td>无（每次全量传输）</td>
+          <td>hash 对比，屏幕未变跳过</td>
+          <td><span class="tag t-green">省 API 调用</span></td>
+        </tr>
+        <tr>
+          <td>区域截图</td>
+          <td>不支持</td>
+          <td>支持 region 参数（只截指定区域）</td>
+          <td><span class="tag t-green">更精准</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>screen_capture 工具定义</h3>
+    <div class="code-block">
+      <span class="lang">MCP Tool Schema</span>
+<pre>{
+  <span class="key">"name"</span>: <span class="str">"screen_capture"</span>,
+  <span class="key">"description"</span>: <span class="str">"截取远程设备屏幕画面，返回 WebP 格式图片（MCP image content type）"</span>,
+  <span class="key">"inputSchema"</span>: {
+    <span class="key">"type"</span>: <span class="str">"object"</span>,
+    <span class="key">"properties"</span>: {
+      <span class="key">"device"</span>: { <span class="key">"type"</span>: <span class="str">"string"</span>, <span class="key">"description"</span>: <span class="str">"目标设备 ID"</span> },
+      <span class="key">"display"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span>, <span class="key">"default"</span>: <span class="num">0</span>, <span class="key">"description"</span>: <span class="str">"显示器编号（多屏时指定）"</span> },
+      <span class="key">"maxWidth"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span>, <span class="key">"default"</span>: <span class="num">512</span>, <span class="key">"description"</span>: <span class="str">"最大宽度（px），控制图片大小"</span> },
+      <span class="key">"quality"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span>, <span class="key">"default"</span>: <span class="num">75</span>, <span class="key">"description"</span>: <span class="str">"WebP 质量 (1-100)"</span> },
+      <span class="key">"region"</span>: {
+        <span class="key">"type"</span>: <span class="str">"object"</span>,
+        <span class="key">"description"</span>: <span class="str">"只截取指定区域（不填则全屏）"</span>,
+        <span class="key">"properties"</span>: {
+          <span class="key">"x"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span> },
+          <span class="key">"y"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span> },
+          <span class="key">"width"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span> },
+          <span class="key">"height"</span>: { <span class="key">"type"</span>: <span class="str">"number"</span> }
+        }
+      }
+    },
+    <span class="key">"required"</span>: [<span class="str">"device"</span>]
+  }
+}</pre>
+    </div>
+
+    <h3>返回格式（MCP image content type）</h3>
+    <div class="code-block">
+      <span class="lang">MCP Response — 方案 B（多模态直接看）</span>
+<pre>{
+  <span class="key">"content"</span>: [
+    {
+      <span class="key">"type"</span>: <span class="str">"image"</span>,
+      <span class="key">"data"</span>: <span class="str">"&lt;WebP base64&gt;"</span>,
+      <span class="key">"mimeType"</span>: <span class="str">"image/webp"</span>
+    },
+    {
+      <span class="key">"type"</span>: <span class="str">"text"</span>,
+      <span class="key">"text"</span>: <span class="str">"Screen captured: 512x288, 28KB, hash: a3f2e1..."</span>
+    }
+  ]
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <span class="lang">MCP Response — 方案 A（视觉模型转文本）</span>
+<pre>{
+  <span class="key">"content"</span>: [
+    {
+      <span class="key">"type"</span>: <span class="str">"text"</span>,
+      <span class="key">"text"</span>: <span class="str">"Screen description (via vision model):\n- Window: File Explorer (active)\n- Desktop icons: 3 PDF files (report.pdf, invoice.pdf, spec.pdf)\n- Taskbar: Start menu, Chrome, VSCode, Terminal\n- System tray: WiFi connected, battery 78%\n- No dialogs or popups visible"</span>
+    },
+    {
+      <span class="key">"type"</span>: <span class="str">"text"</span>,
+      <span class="key">"text"</span>: <span class="str">"Hash: a3f2e1... | Cached: false | Vision model: mimo-v2.5"</span>
+    }
+  ]
+}</pre>
+    </div>
+  </div>
+
+  <!-- ===== ui_tree 辅助工具 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent3)"></span> ui_tree — 结构化 UI 元素树（无 API 成本）</h2>
+
+    <div class="highlight">
+      <h4>不调任何模型，本地 Accessibility API 提取</h4>
+      <p>
+        <code>ui_tree</code> 通过操作系统 Accessibility API（Windows UIAutomation / macOS AXUIElement / Linux AT-SPI）<br>
+        直接获取当前屏幕的 UI 元素树：窗口标题、按钮文本、输入框位置、列表项等。<br>
+        <b>零 API 成本，毫秒级响应。</b>适合方案 A 中替代视觉模型做简单的屏幕理解。
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>维度</th><th>ui_tree</th><th>screen_capture + 视觉模型</th></tr>
+        <tr>
+          <td>API 成本</td>
+          <td><span class="tag t-green">免费</span></td>
+          <td>每次调用付费</td>
+        </tr>
+        <tr>
+          <td>延迟</td>
+          <td><span class="tag t-green">&lt;100ms</span></td>
+          <td>1-3s</td>
+        </tr>
+        <tr>
+          <td>信息类型</td>
+          <td>结构化（坐标+文本+类型+状态）</td>
+          <td>自然语言描述</td>
+        </tr>
+        <tr>
+          <td>视觉信息</td>
+          <td><span class="tag t-red">无</span>（看不到颜色/图标/图片）</td>
+          <td><span class="tag t-green">完整</span></td>
+        </tr>
+        <tr>
+          <td>适用场景</td>
+          <td>原生应用 UI 操作、表单填写、菜单导航</td>
+          <td>网页/图片/非标准 UI、需要视觉判断</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>ui_tree 返回示例</h3>
+    <div class="code-block">
+      <span class="lang">MCP Response</span>
+<pre>{
+  <span class="key">"content"</span>: [
+    {
+      <span class="key">"type"</span>: <span class="str">"text"</span>,
+      <span class="key">"text"</span>: <span class="str">"UI Tree (Windows UIAutomation):\n\n[Window] File Explorer (active) {x:0,y:0,w:1920,h:1080}\n  [ToolBar] Address Bar {y:42}\n    [Edit] C:\\Users\\admin\\Desktop {y:42,w:400}\n  [ListView] Desktop Items {x:0,y:80,w:1920,h:900}\n    [ListItem] report.pdf {x:20,y:100}\n    [ListItem] invoice.pdf {x:20,y:140}\n    [ListItem] spec.pdf {x:20,y:180}\n  [Button] New folder {x:1700,y:1020}\n  [Button] Properties {x:1800,y:1020}\n[Taskbar] {y:1050}\n  [Button] Start {x:0,y:1050}\n  [Button] Chrome {x:50,y:1050}\n  [Button] VSCode {x:100,y:1050}"</span>
+    }
+  ]
+}</pre>
+    </div>
+  </div>
+
+  <!-- ===== 选型决策 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--amber)"></span> 场景→工具链映射</h2>
+
+    <div class="highlight" style="margin-bottom:16px">
+      <p>
+        下表不是 Agent 运行时的决策树——<b>所有路由都是主模型根据指令语义自主判断的</b>。<br>
+        这里只是说明：不同类型的指令，主模型"倾向于"走哪条路径，以及对应的成本和延迟。
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>用户指令示例</th><th>主模型判断</th><th>调用工具</th><th>视觉路径</th><th>成本</th><th>延迟</th></tr>
+        <tr>
+          <td>"查看服务器磁盘空间"</td>
+          <td>纯文本，直接执行</td>
+          <td><code>exec("df -h")</code></td>
+          <td><span class="tag t-green">不需要</span></td>
+          <td><span class="tag t-green">最低</span></td>
+          <td>~1s</td>
+        </tr>
+        <tr>
+          <td>"桌面上有哪些文件"</td>
+          <td>结构化 UI 即可</td>
+          <td><code>ui_tree()</code></td>
+          <td><span class="tag t-green">免费(本地)</span></td>
+          <td><span class="tag t-green">免费</span></td>
+          <td>~0.5s</td>
+        </tr>
+        <tr>
+          <td>"帮我看下日志里的报错"</td>
+          <td>文件读取，纯文本</td>
+          <td><code>file_read()</code></td>
+          <td><span class="tag t-green">不需要</span></td>
+          <td><span class="tag t-green">最低</span></td>
+          <td>~1s</td>
+        </tr>
+        <tr>
+          <td>"帮我点那个蓝色按钮"</td>
+          <td>需要视觉定位</td>
+          <td><code>screen_capture()</code> → <code>remote_input()</code></td>
+          <td>方案A: MiMo 转文本<br>方案B: 直接看图</td>
+          <td><span class="tag t-orange">中</span></td>
+          <td>A:~3s / B:~2s</td>
+        </tr>
+        <tr>
+          <td>"看下这个网页为什么显示异常"</td>
+          <td>需要视觉判断</td>
+          <td><code>screen_capture()</code> → 分析</td>
+          <td>方案A: MiMo 转文本<br>方案B: 直接看图</td>
+          <td><span class="tag t-orange">中</span></td>
+          <td>A:~3s / B:~2s</td>
+        </tr>
+        <tr>
+          <td>"检查应用是否正常加载"</td>
+          <td>需要视觉验证</td>
+          <td><code>screen_capture()</code> → 判断</td>
+          <td>方案A: MiMo 转文本<br>方案B: 直接看图</td>
+          <td><span class="tag t-orange">中</span></td>
+          <td>A:~3s / B:~2s</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="highlight" style="margin-top:16px">
+      <h4>核心原则</h4>
+      <p>
+        1. <b>主模型决定调什么工具</b>——根据指令语义和 Tool 描述自主选择<br>
+        2. <b>配置决定视觉路径</b>——方案 A 还是 B 在 openclaw.json 里定死，运行时自动走<br>
+        3. <b>Agent 无感知</b>——无论哪个方案，Agent 调用的都是 <code>screen_capture</code>，MCP Server 内部处理差异<br>
+        4. <b>纯文本任务零成本</b>——命令行/文件/系统信息类任务不触发任何视觉路径，V4-Flash 直接处理
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 迁移路线 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 演进路线</h2>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>阶段</th><th>时间</th><th>主模型</th><th>视觉模型</th><th>说明</th></tr>
+        <tr>
+          <td><b>Phase 1 (POC)</b></td>
+          <td>当前</td>
+          <td>DeepSeek V4-Flash</td>
+          <td>—</td>
+          <td>纯文本，验证 MCP 基础能力（exec/file_list/sysinfo）</td>
+        </tr>
+        <tr>
+          <td><b>Phase 1.5</b></td>
+          <td>POC 通过后</td>
+          <td>DeepSeek V4-Flash</td>
+          <td>MiMo-V2.5</td>
+          <td>方案 A 上线：双模型架构，screen_capture + ui_tree</td>
+        </tr>
+        <tr>
+          <td><b>Phase 2</b></td>
+          <td>开发期</td>
+          <td>DeepSeek V4-Flash + MiMo-V2.5</td>
+          <td>双方案并存</td>
+          <td>按场景自动路由，GUI 走方案 B，命令行走方案 A</td>
+        </tr>
+        <tr>
+          <td><b>Phase 3</b></td>
+          <td>稳定期</td>
+          <td>DeepSeek V4-Pro（复杂任务）/ V4-Flash（日常）</td>
+          <td>MiMo-V2.5 或 V4 Vision API（若开放）</td>
+          <td>V4 API 开放图片能力后，可简化为单模型方案</td>
+        </tr>
+        <tr>
+          <td><b>未来</b></td>
+          <td>V4.1 发布后</td>
+          <td>DeepSeek V4.1</td>
+          <td>内置（文本+图像+音频）</td>
+          <td>V4.1 规划全模态，API 开放后切回单模型</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="highlight">
+      <h4>API 迁移提醒</h4>
+      <p>
+        DeepSeek 旧版 API <code>deepseek-chat</code> / <code>deepseek-reasoner</code> 将于 <b>2026年7月24日停用</b>。<br>
+        需切换至新模型名：<code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code>。<br>
+        GCA 从一开始就用新 API，无需迁移。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 备选模型对比 ===== -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 视觉模型选型对比（方案 A 的"眼睛"）</h2>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>模型</th><th>多模态</th><th>API 兼容</th><th>输入/输出价格</th><th>上下文</th><th>开源</th><th>OpenClaw</th><th>推荐度</th></tr>
+        <tr>
+          <td><b>MiMo-V2.5</b></td>
+          <td>图+视频+音频+文本</td>
+          <td>OpenAI + Anthropic</td>
+          <td>$1 / $3 per M</td>
+          <td>1M</td>
+          <td><span class="tag t-green">MIT</span></td>
+          <td><span class="tag t-orange">需配置</span></td>
+          <td><span class="tag t-green">首选</span></td>
+        </tr>
+        <tr>
+          <td><b>MiniMax-M3</b></td>
+          <td>图+视频+文本</td>
+          <td>OpenAI + Anthropic</td>
+          <td>$0.30 / $1.20 per M</td>
+          <td>1M</td>
+          <td><span class="tag t-red">闭源</span></td>
+          <td><span class="tag t-green">原生</span></td>
+          <td><span class="tag t-blue">备选</span></td>
+        </tr>
+        <tr>
+          <td><b>Qwen-VL-Max</b></td>
+          <td>图+视频+文本</td>
+          <td>OpenAI</td>
+          <td>~$0.40 / $1.20 per M</td>
+          <td>128K</td>
+          <td><span class="tag t-orange">部分</span></td>
+          <td><span class="tag t-orange">需配置</span></td>
+          <td><span class="tag t-blue">备选</span></td>
+        </tr>
+        <tr>
+          <td><b>GLM-4V</b></td>
+          <td>图+文本</td>
+          <td>OpenAI</td>
+          <td>~$0.50 / $1.50 per M</td>
+          <td>128K</td>
+          <td><span class="tag t-orange">部分</span></td>
+          <td><span class="tag t-green">原生</span></td>
+          <td><span class="tag t-blue">备选</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="color:var(--dim);font-size:.85rem;margin-top:12px">
+      MiMo-V2.5 首选原因：MIT 开源（可自部署）、全模态（图+视频+音频）、1M 上下文、原生 Agent 能力。<br>
+      MiniMax-M3 备选原因：OpenClaw 原生支持零配置、价格最低、多模态能力足够。
+    </p>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">首页</a> &nbsp;|&nbsp; <a href="../architecture/index.html">架构</a> &nbsp;|&nbsp; <a href="../capabilities/index.html">能力全景</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安全分析 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.verdict{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;letter-spacing:.5px}
+.v-feasible{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.v-partial{background:rgba(245,158,11,.15);color:var(--orange);border:1px solid rgba(245,158,11,.3)}
+.v-risk{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="../architecture/index.html">架构</a><span class="sep">/</span>
+  <span class="current">安全分析</span>
+</div>
+
+<div class="container">
+  <h1>可行性与安全性分析</h1>
+  <p class="subtitle">基于 OpenClaw + MCP 架构的技术验证与风险评估</p>
+
+  <div class="summary-bar">
+    <div class="s-item"><div class="num" style="color:var(--green)">✓</div><div class="label">整体可行</div></div>
+    <div class="s-item"><div class="num" style="color:var(--red)">3</div><div class="label">高风险</div></div>
+    <div class="s-item"><div class="num" style="color:var(--orange)">4</div><div class="label">中风险</div></div>
+    <div class="s-item"><div class="num" style="color:var(--green)">2</div><div class="label">低风险</div></div>
+  </div>
+
+  <!-- 可行性 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 技术可行性</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>评估项</th><th>结论</th><th>依据</th></tr>
+        <tr><td>Gateway MCP Host</td><td><span class="verdict v-feasible">可行</span></td><td>OpenClaw 原生支持 mcpServers 配置，自动发现 MCP Tools</td></tr>
+        <tr><td>客户端 MCP Server</td><td><span class="verdict v-feasible">可行</span></td><td>@modelcontextprotocol/sdk 成熟，SSE/WS 传输</td></tr>
+        <tr><td>远程桌面推流</td><td><span class="verdict v-partial">需要适配</span></td><td>screenshot-desktop + Sharp + WS，跨平台有差异</td></tr>
+        <tr><td>UI 自动化</td><td><span class="verdict v-partial">平台差异大</span></td><td>Windows UIAutomation / Linux AT-SPI2 / macOS AX API 三套</td></tr>
+        <tr><td>外网访问</td><td><span class="verdict v-feasible">可行</span></td><td>Tailscale + DDNS-GO 已验证可用</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 高风险 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 高风险项</h2>
+    <div class="risk-matrix">
+      <div class="risk risk-critical">
+        <h4>远程命令执行 — 命令注入</h4>
+        <p>客户端暴露 exec MCP Tool，AI 被 prompt injection 攻击可能执行恶意命令。</p>
+        <div class="fix"><strong>缓解：</strong>OpenClaw exec approval 机制（allowlist + ask）；敏感命令黑名单；沙箱模式。</div>
+      </div>
+      <div class="risk risk-critical">
+        <h4>远程桌面 — 未授权访问</h4>
+        <p>屏幕推流 + 鼠标键盘直通 = 完全控制。连接被劫持则设备沦陷。</p>
+        <div class="fix"><strong>缓解：</strong>Gateway auth token 强制认证；Tailscale 加密隧道；远程控制需被控端确认。</div>
+      </div>
+      <div class="risk risk-critical">
+        <h4>Prompt Injection — AI 被劫持</h4>
+        <p>不受信内容（网页、邮件、文件）携带恶意指令，操纵 AI 执行危险操作。</p>
+        <div class="fix"><strong>缓解：</strong>使用旗舰模型；不受信内容用只读 reader agent 预处理；高风险工具走 approval。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中风险 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--orange)"></span> 中风险项</h2>
+    <div class="risk-matrix">
+      <div class="risk risk-high">
+        <h4>Gateway Token 泄露</h4>
+        <p>客户端存储 Gateway 认证 token，泄露则未授权设备可接入。</p>
+        <div class="fix"><strong>缓解：</strong>token 存储在系统 keychain；定期轮换；Gateway 侧可撤销已知设备。</div>
+      </div>
+      <div class="risk risk-high">
+        <h4>剪贴板数据泄露</h4>
+        <p>跨设备剪贴板同步可能无意中传输密码、token。</p>
+        <div class="fix"><strong>缓解：</strong>敏感模式检测；同步后自动清除远端剪贴板。</div>
+      </div>
+      <div class="risk risk-high">
+        <h4>Gateway 单点故障</h4>
+        <p>Gateway 挂掉导致所有设备失联、所有通道中断。</p>
+        <div class="fix"><strong>缓解：</strong>launchd/systemd 守护进程自动重启；健康检查告警。</div>
+      </div>
+      <div class="risk risk-high">
+        <h4>外网暴露攻击面</h4>
+        <p>Tailscale/DDNS-GO 暴露 Gateway 到外网，可能被扫描攻击。</p>
+        <div class="fix"><strong>缓解：</strong>Gateway auth token 必须设置；Tailscale 本身有加密；定期安全审计。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 低风险 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 低风险项</h2>
+    <div class="risk-matrix">
+      <div class="risk risk-low">
+        <h4>配置文件安全</h4>
+        <p>客户端本地存储 Gateway token、Headscale 密钥等凭据。</p>
+        <div class="fix"><strong>缓解：</strong>使用系统 keychain 存储凭据；不写入明文配置文件。</div>
+      </div>
+      <div class="risk risk-low">
+        <h4>第三方依赖漏洞</h4>
+        <p>systeminformation/screenshot-desktop/@modelcontextprotocol/sdk 等 npm 包可能存在安全漏洞。</p>
+        <div class="fix"><strong>缓解：</strong>npm audit 定期检查；锁定版本；关键依赖 fork。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenClaw 安全机制 -->
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 可复用的 OpenClaw 安全机制</h2>
+    <div class="grid grid-3">
+      <div class="card"><h4>设备配对</h4><p>challenge 签名 + 人工审批，防止未授权设备接入</p></div>
+      <div class="card"><h4>工具策略</h4><p>per-agent allow/deny 列表，AI 只能看到被允许的 Tools</p></div>
+      <div class="card"><h4>Exec Approval</h4><p>命令执行审批机制，allowlist + 每次确认</p></div>
+      <div class="card"><h4>沙箱模式</h4><p>Docker 容器隔离工具执行，限制文件系统和网络访问</p></div>
+      <div class="card"><h4>安全审计</h4><p>openclaw security audit 自动检查配置风险</p></div>
+      <div class="card"><h4>会话隔离</h4><p>dmScope: per-peer，不同用户上下文隔离</p></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">首页</a> &nbsp;|&nbsp; <a href="../architecture/index.html">架构</a> &nbsp;|&nbsp; <a href="../maintenance/index.html">维护</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

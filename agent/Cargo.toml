@@ -1,0 +1,24 @@
+[package]
+name = "gca-agent"
+version = "0.3.0"
+edition = "2021"
+description = "GCA device-side components (Windows) — zero-dependency: gca-agent (AI MCP server) + gca-term (human terminal service)"
+
+[lib]
+name = "gca_agent"
+path = "src/lib.rs"
+# cdylib：Android 原生化（JNI 加载 libgca_agent.so，docs/android-native-plan.md）；
+# Windows 构建会额外产出 gca_agent.dll（bin 链接不受影响，可忽略）
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "gca-agent"
+path = "src/bin/gca-agent.rs"
+
+[[bin]]
+name = "gca-term"
+path = "src/bin/gca-term.rs"
+
+[dependencies]
+serde_json = "1"
+# 真终端 ConPTY 抽象（WezTerm 生产验证，MIT）——C-1 方案，2026-08-06

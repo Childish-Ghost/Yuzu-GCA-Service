@@ -1,0 +1,14 @@
+# GCA Rust 工作区：一次构建全部二进制
+#   desktop-rs/gca-desktop-rs.exe — 桌面控制端（GUI）
+#   agent/gca-agent.exe           — 设备端 agent（MCP server，可独立部署到被控设备）
+[workspace]
+members = ["desktop-rs", "agent"]
+resolver = "2"
+
+[workspace.package]
+version = "0.5.0"
+edition = "2021"
+
+[profile.release]
+opt-level = "s"
+strip = true

@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.4.0-beta.1",
+  "name": "B0.4.0-beta.1",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.4.0-beta.1（测试版）· 2026-08-12\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.4.0** · agent+term **0.1.0** · server **0.3.0**（本版只改了 desktop）\n- 安装包内 components.json 同此矩阵\n\n### 变更\n- （本次发版内容）\n\n### 交付物（新命名规范）\n- **gca-setup-win-B0.4.0-beta.1.exe** — Windows 安装程序（Desktop + Agent + Term，组件勾选）\n- **gca-linux-B0.4.0-beta.1.deb** — Ubuntu 客户端单包（debconf 选择安装）\n- **gca-agent-android-B0.4.0-beta.1.apk** — Android agent（agent 组件号）\n- **gca-server-B0.3.0.zip** — 服务端（server 组件号）\n- **gca-server-linux-B0.3.0.deb** — 服务端 deb\n\n### 已知限制\n- （本版限制）"
+}

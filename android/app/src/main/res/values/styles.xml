@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.GcaApp" parent="Theme.AppCompat.Light.NoActionBar">
+    </style>
+    <!-- 审批弹窗（2026-08-14）：dialog 主题，收到审批请求时以弹窗形式弹出 -->
+    <style name="Theme.GcaApp.Dialog" parent="Theme.AppCompat.Light.Dialog">
+    </style>
+</resources>

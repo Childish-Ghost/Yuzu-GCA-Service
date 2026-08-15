@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.4.0-beta.2",
+  "name": "B0.4.0-beta.2",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.4.0-beta.2（测试版）· 2026-08-13\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.4.0** · agent+term **0.2.0** · server **0.4.0** · Android **0.2.0**（新增）\n\n### 变更（相对 beta.1：Android 原生化完成）\n- **Android APK 全面重写（docs/android-native-plan.md P0-P4 完成）**：\n  - nodejs-mobile 壳退出（164MB → 5.6MB），Rust agent（0.2.0，20 工具）JNI 直启 libgca_agent.so\n  - 手写 JNI 双向桥（JavaVM attach/全局类引用/完整函数表）——classloader/索引等踩坑 5 条入文档\n  - 工具层 Android 适配：exec(sh)/clipboard/screenshot（A11y+MediaProjection 高低版本分支）/remote_input 手势/notify，power/service/consent unsupported\n  - S1 设备 token（自铸 64-hex 持久化）、心跳（5 分钟 URL 上报）、审计推送默认开——注册→审批→审计端到端实测\n  - Android 15+ BOOT_COMPLETED FGS 限制修复（connectedDevice 类型 + 延迟启动 + USER_PRESENT 兜底）\n  - 三环境验证：API 36 模拟器全链路 / API 24（Android 7）低版本分支 / 真机 MIUI\n- beta.1 内容不变（安全审查 44 项 / mDNS / 审计集中 / 事件驱动阶段二）\n\n### 交付物\n- **gca-agent-android-B0.2.0.apk** — Android agent（Rust 原生，新增）\n- **gca-setup-win-B0.4.0-beta.1.exe** — Windows 安装程序（Desktop 0.4.0 + Agent 0.2.0 + Term 0.2.0）\n- **gca-server-0.4.0.zip** / **gca-server-linux-B0.4.0.deb** — 服务端\n\n### 已知限制\n- 真机（MIUI）杀后台进程：需在系统设置开启 GCA 自启动/省电白名单（STICKY 重启兜底）\n- Android 10+ 后台读剪贴板受限（get 附提示）；remote_input 的 key_type（IME 注入）未实现\n- release keystore 密码测试期固定（gca-release-2026），正式发布前更换"
+}

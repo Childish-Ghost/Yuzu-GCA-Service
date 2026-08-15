@@ -1,0 +1,11 @@
+src/
+tests/
+scripts/
+relay/
+docs/
+node_modules/
+dist/server/
+*.ts
+tsconfig.json
+.env.example
+gca-bundle.cjs

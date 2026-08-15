@@ -1,0 +1,42 @@
+{
+  "说明": "GCA 环境配置模板。本文件只含占位符 <填入内容>，可安全入库（含公开仓库）。实际配置请复制为 config.json 填入真实值（config.json 不入库），或直接走环境变量 / Windows DPAPI / Android Keystore。",
+
+  "部署环境": {
+    "网关IP": "<填入内容>",
+    "SSH用户名": "<填入内容>",
+    "服务端token文件路径": "<填入内容>",
+    "本机IP": "<填入内容>",
+    "Android设备IP": "<填入内容>",
+    "ADB序列号": "<填入内容>"
+  },
+
+  "server": {
+    "GCA_SERVER_TOKEN": "<填入内容>",
+    "GCA_SERVER_PORT": 18790,
+    "GCA_SERVER_URL": "http://<网关IP>:18790",
+    "GCA_SERVER_LOG_LEVEL": "info",
+    "OPENCLAW_GATEWAY_URL": "<填入内容>",
+    "OPENCLAW_GATEWAY_TOKEN": "<填入内容>",
+    "OPENCLAW_CONFIG": "~/.openclaw/openclaw.json",
+    "OPENCLAW_BIN": "<填入内容>"
+  },
+
+  "agent_term": {
+    "GCA_MCP_TOKEN": "<填入内容>",
+    "GCA_DEVICE_TOKEN": "<填入内容>",
+    "GCA_TERM_TOKEN": "<填入内容>",
+    "GCA_DEVICE_NAME": "<填入内容>",
+    "GCA_MACHINE_ID": "<填入内容>",
+    "GCA_AGENT_PORT": 3001,
+    "GCA_TERM_PORT": 3011,
+    "GCA_TERM_IDLE_MS": "<填入内容>",
+    "GCA_CONPTY_SIDELOAD": 0,
+    "GCA_AUDIT_PUSH": 0,
+    "TRANSFER_HOST": "<填入内容>"
+  },
+
+  "android": {
+    "GCA_ANDROID_FILES_DIR": "/sdcard",
+    "GCA_KEYSTORE_PASS": "<填入内容>"
+  }
+}

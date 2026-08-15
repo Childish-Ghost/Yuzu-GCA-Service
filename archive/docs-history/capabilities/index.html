@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>能力全景 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.cat{margin-bottom:40px}
+.cat-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.cat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.cat-header h2{font-size:1.2rem;flex:1;margin:0}
+.cat-header .count{font-size:.72rem;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,.05);color:var(--dim);flex-shrink:0}
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.tool{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all .3s}
+.tool:hover{border-color:var(--accent)}
+.tool h4{font-size:.9rem;margin-bottom:4px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;color:var(--green)}
+.tool p{color:var(--dim);font-size:.8rem;line-height:1.4;margin-bottom:6px}
+.tool .params{font-size:.75rem;color:var(--dim);font-family:'Cascadia Code','Fira Code','Consolas',monospace;background:rgba(0,0,0,.2);padding:6px 10px;border-radius:6px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="../architecture/index.html">架构</a><span class="sep">/</span>
+  <span class="current">能力全景</span>
+</div>
+
+<div class="container">
+  <h1>MCP Tools 能力全景</h1>
+  <p class="subtitle">客户端（MCP Server）暴露给 Gateway 的全部工具，AI 自动调用</p>
+
+  <div class="summary-bar">
+    <div class="s-item"><div class="num" style="color:var(--accent)">4</div><div class="label">设备管理</div></div>
+    <div class="s-item"><div class="num" style="color:var(--green)">3</div><div class="label">命令执行</div></div>
+    <div class="s-item"><div class="num" style="color:var(--accent3)">6</div><div class="label">文件操作</div></div>
+    <div class="s-item"><div class="num" style="color:var(--orange)">3</div><div class="label">系统控制</div></div>
+    <div class="s-item"><div class="num" style="color:var(--pink)">5</div><div class="label">远程桌面</div></div>
+    <div class="s-item"><div class="num" style="color:var(--accent2)">6</div><div class="label">AI 操控</div></div>
+    <div class="s-item"><div class="num" style="color:var(--teal)">3</div><div class="label">网络</div></div>
+    <div class="s-item"><div class="num" style="color:var(--lime)">3</div><div class="label">硬件</div></div>
+    <div class="s-item"><div class="num" style="color:var(--sky)">3</div><div class="label">开发工具</div></div>
+    <div class="s-item"><div class="num" style="color:var(--red)">2</div><div class="label">媒体</div></div>
+  </div>
+
+  <!-- 1. 设备管理 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(59,130,246,.15)">📱</div>
+      <h2>设备管理</h2>
+      <span class="count">4 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>device_list</h4>
+        <p>列出所有已注册设备及在线状态</p>
+        <div class="params">无参数</div>
+      </div>
+      <div class="tool">
+        <h4>device_info</h4>
+        <p>获取指定设备的详细信息（OS、IP、资源使用）</p>
+        <div class="params">device: string</div>
+      </div>
+      <div class="tool">
+        <h4>device_add</h4>
+        <p>添加新设备配置（客户端自动注册，此 Tool 用于手动注册 CLI 设备）</p>
+        <div class="params">id, name, url: string</div>
+      </div>
+      <div class="tool">
+        <h4>device_remove</h4>
+        <p>移除设备配置</p>
+        <div class="params">device: string</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 命令执行 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(34,197,94,.15)">💻</div>
+      <h2>命令执行</h2>
+      <span class="count">3 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>exec</h4>
+        <p>在指定设备上执行命令并等待结果</p>
+        <div class="params">device: string, command: string, timeout?: number</div>
+      </div>
+      <div class="tool">
+        <h4>exec_background</h4>
+        <p>后台执行长时间命令，返回任务 ID</p>
+        <div class="params">device: string, command: string</div>
+      </div>
+      <div class="tool">
+        <h4>process_list</h4>
+        <p>列出指定设备上的进程（支持按 CPU/内存排序）</p>
+        <div class="params">device: string, sort?: "cpu" | "memory", limit?: number</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 文件操作 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(6,182,212,.15)">📁</div>
+      <h2>文件操作</h2>
+      <span class="count">6 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>file_list</h4>
+        <p>列出目录内容（支持 glob 过滤和递归）</p>
+        <div class="params">device: string, path: string, pattern?: string, recursive?: boolean</div>
+      </div>
+      <div class="tool">
+        <h4>file_read</h4>
+        <p>读取文件内容（支持行范围读取）</p>
+        <div class="params">device: string, path: string, offset?: number, limit?: number</div>
+      </div>
+      <div class="tool">
+        <h4>file_write</h4>
+        <p>写入/创建文件</p>
+        <div class="params">device: string, path: string, content: string</div>
+      </div>
+      <div class="tool">
+        <h4>file_move</h4>
+        <p>移动/重命名文件</p>
+        <div class="params">device: string, from: string, to: string</div>
+      </div>
+      <div class="tool">
+        <h4>file_delete</h4>
+        <p>删除文件</p>
+        <div class="params">device: string, path: string</div>
+      </div>
+      <div class="tool">
+        <h4>file_transfer</h4>
+        <p>跨设备文件传输（从源设备传到目标设备）</p>
+        <div class="params">from_device: string, from_path: string, to_device: string, to_path: string</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 系统控制 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(245,158,11,.15)">⚙️</div>
+      <h2>系统控制</h2>
+      <span class="count">3 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>sysinfo</h4>
+        <p>获取系统信息（CPU/内存/磁盘/网络/运行时间）</p>
+        <div class="params">device: string</div>
+      </div>
+      <div class="tool">
+        <h4>power</h4>
+        <p>电源操作（关机/重启/休眠/Wake-on-LAN）</p>
+        <div class="params">device: string, action: "shutdown" | "restart" | "hibernate" | "wol"</div>
+      </div>
+      <div class="tool">
+        <h4>service</h4>
+        <p>系统服务管理（启动/停止/重启/查看状态）</p>
+        <div class="params">device: string, name: string, action: "start" | "stop" | "restart" | "status"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 远程桌面 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(236,72,153,.15)">🖱️</div>
+      <h2>远程桌面（人工操控）</h2>
+      <span class="count">5 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>screen_capture</h4>
+        <p>截取远程设备屏幕，返回 WebP 图片（MCP image content type）。支持区域截图和分辨率控制</p>
+        <div class="params">device: string, display?: number, maxWidth?: number=512, quality?: number=75, region?: {x,y,width,height}</div>
+      </div>
+      <div class="tool">
+        <h4>ui_tree</h4>
+        <p>通过 Accessibility API 获取当前屏幕 UI 元素树（坐标+文本+类型+状态）。零 API 成本，毫秒级响应</p>
+        <div class="params">device: string, app?: string, depth?: number</div>
+      </div>
+      <div class="tool">
+        <h4>remote_input</h4>
+        <p>发送鼠标/键盘事件到远程设备</p>
+        <div class="params">device: string, type: "mouse_move" | "mouse_click" | "mouse_scroll" | "key_type" | "key_press" | "hotkey", ...</div>
+      </div>
+      <div class="tool">
+        <h4>remote_stream</h4>
+        <p>开始/停止屏幕推流（返回 WS 数据端口地址）</p>
+        <div class="params">device: string, action: "start" | "stop", fps?: number, quality?: number</div>
+      </div>
+      <div class="tool">
+        <h4>clipboard_sync</h4>
+        <p>读取/设置远程设备剪贴板，跨设备同步</p>
+        <div class="params">device: string, action: "get" | "set" | "sync", content?: string</div>
+      </div>
+    </div>
+    <p style="color:var(--dim);font-size:.78rem;margin-top:10px;padding:10px 14px;background:rgba(59,130,246,.05);border-radius:8px">
+      <b>screen_capture 优化</b>：从旧方案 base64 JPEG (~400KB) 改为 WebP (~30KB)，支持 MCP image content type，Token 消耗降 4x。<br>
+      <b>ui_tree 新增</b>：本地 Accessibility API 提取结构化 UI 信息，零 API 成本替代视觉模型做简单屏幕理解。<br>
+      详见 <a href="../ai-strategy/index.html" style="color:var(--accent)">AI 模型策略</a> — 方案 A/B 按场景自动路由。
+    </p>
+  </div>
+
+  <!-- 6. AI 应用操控 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(139,92,246,.15)">🤖</div>
+      <h2>AI 应用操控</h2>
+      <span class="count">6 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>ui_find</h4>
+        <p>通过 Accessibility API 查找应用内的 UI 元素</p>
+        <div class="params">device: string, app: string, element: string, role?: string</div>
+      </div>
+      <div class="tool">
+        <h4>ui_act</h4>
+        <p>操作 UI 元素（点击/输入/选择/读取）</p>
+        <div class="params">device: string, element_id: string, action: "click" | "set_value" | "get_value"</div>
+      </div>
+      <div class="tool">
+        <h4>browser_open</h4>
+        <p>在远程设备上打开 URL 或操控已打开的浏览器</p>
+        <div class="params">device: string, url?: string, attach?: boolean</div>
+      </div>
+      <div class="tool">
+        <h4>browser_act</h4>
+        <p>浏览器内操作（填写表单/点击元素/截图/获取文本）</p>
+        <div class="params">device: string, action: "fill" | "click" | "screenshot" | "get_text", selector?: string, value?: string</div>
+      </div>
+      <div class="tool">
+        <h4>ocr_screen</h4>
+        <p>对远程设备屏幕进行 OCR 文字识别</p>
+        <div class="params">device: string, region?: { x, y, width, height }</div>
+      </div>
+      <div class="tool">
+        <h4>screen_describe</h4>
+        <p>截图发送给视觉理解模型（MiMo/MiniMax），返回结构化文本描述。方案 A 专用：DeepSeek V4 无法看图时使用</p>
+        <div class="params">device: string, prompt?: string, model?: "mimo-v2.5" | "minimax-m3"</div>
+      </div>
+    </div>
+    <p style="color:var(--dim);font-size:.78rem;margin-top:10px;padding:10px 14px;background:rgba(139,92,246,.05);border-radius:8px">
+      <b>screen_describe 新增</b>：方案 A 双模型架构的核心工具。截图 → 视觉模型 → 结构化文本 → DeepSeek V4 推理。<br>
+      与 <code>ui_tree</code>（免费但无视觉信息）互补：简单 UI 用 ui_tree，复杂界面/网页用 screen_describe。
+    </p>
+  </div>
+
+  <!-- 7. 网络管理 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(20,184,166,.15)">🌍</div>
+      <h2>网络管理</h2>
+      <span class="count">3 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>net_status</h4>
+        <p>网络状态（接口/IP/连通性/流量）</p>
+        <div class="params">device: string</div>
+      </div>
+      <div class="tool">
+        <h4>net_wifi</h4>
+        <p>WiFi 管理（扫描/连接/列出已保存网络）</p>
+        <div class="params">device: string, action: "scan" | "connect" | "list", ssid?: string, password?: string</div>
+      </div>
+      <div class="tool">
+        <h4>net_ping</h4>
+        <p>网络诊断（ping/traceroute/DNS 查询）</p>
+        <div class="params">device: string, target: string, action?: "ping" | "traceroute" | "dns"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 硬件监控 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(132,204,22,.15)">🔧</div>
+      <h2>硬件监控</h2>
+      <span class="count">3 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>hw_temps</h4>
+        <p>温度监控（CPU/GPU/磁盘温度）</p>
+        <div class="params">device: string</div>
+      </div>
+      <div class="tool">
+        <h4>hw_battery</h4>
+        <p>电池状态（电量/充电状态/健康度）</p>
+        <div class="params">device: string</div>
+      </div>
+      <div class="tool">
+        <h4>hw_disk</h4>
+        <p>磁盘信息（分区/使用量/SMART 数据）</p>
+        <div class="params">device: string</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 开发者工具 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(14,165,233,.15)">🛠️</div>
+      <h2>开发者工具</h2>
+      <span class="count">3 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>docker_ps</h4>
+        <p>Docker 容器管理（列表/启动/停止/重启/日志）</p>
+        <div class="params">device: string, action: "list" | "start" | "stop" | "restart" | "logs", container?: string</div>
+      </div>
+      <div class="tool">
+        <h4>git_op</h4>
+        <p>Git 操作（status/pull/push/log）</p>
+        <div class="params">device: string, repo: string, action: "status" | "pull" | "push" | "log"</div>
+      </div>
+      <div class="tool">
+        <h4>log_read</h4>
+        <p>读取系统/应用日志</p>
+        <div class="params">device: string, source: string, lines?: number, filter?: string</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. 媒体通信 -->
+  <div class="cat">
+    <div class="cat-header">
+      <div class="cat-icon" style="background:rgba(239,68,68,.15)">🎬</div>
+      <h2>媒体通信</h2>
+      <span class="count">2 tools</span>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h4>media_control</h4>
+        <p>媒体播放控制（播放/暂停/下一曲/音量）</p>
+        <div class="params">device: string, action: "play" | "pause" | "next" | "prev" | "volume", value?: number</div>
+      </div>
+      <div class="tool">
+        <h4>notify_send</h4>
+        <p>发送桌面通知到指定设备</p>
+        <div class="params">device: string, title: string, body?: string</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">首页</a> &nbsp;|&nbsp; <a href="../architecture/index.html">架构</a> &nbsp;|&nbsp; <a href="../roadmap/index.html">路线图</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

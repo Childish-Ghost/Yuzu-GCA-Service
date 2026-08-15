@@ -1,0 +1,37 @@
+{
+  "name": "gca-client",
+  "version": "0.1.0",
+  "description": "GCA — Global Control Assistant device client (MCP server + 20 tools + approval system + CLI)",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "gca": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node --test --import tsx tests/**/*.test.ts",
+    "test:e2e": "node tests/e2e-test.mjs",
+    "setup:totp": "tsx scripts/setup-totp.ts",
+    "setup:pairing": "tsx scripts/setup-pairing.ts",
+    "gca": "tsx src/cli.ts",
+    "pair": "tsx src/cli.ts pair",
+    "pair-init": "tsx src/cli.ts pair-init",
+    "server:dev": "tsx src/server/gca-server.ts",
+    "server:start": "node dist/server/gca-server.js",
+    "server:setup": "tsx src/server/cli.ts setup"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^4.21.0",
+    "pino": "^10.3.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "gca-approval",
+  "channels": ["feishu"],
+  "skills": [],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

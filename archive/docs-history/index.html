@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Control Assistant — 全局控制助手</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="topbar">
+  <span class="current">首页</span>
+</div>
+
+<div class="hero">
+  <h1>Global Control Assistant</h1>
+  <p>任意设备控制任意设备 · AI 对话操作所有设备</p>
+  <div class="badge">自建客户端 = MCP Server · Gateway = MCP Host · 所有被控设备装客户端</div>
+</div>
+
+<div class="container">
+  <h2>这个项目是什么？</h2>
+  <div class="card" style="border-color:rgba(59,130,246,.3);margin-bottom:32px">
+    <p style="font-size:.95rem;line-height:1.8;color:var(--text)">
+      <b>Global Control Assistant (GCA)</b> 是一个<b>跨设备远程控制与 AI 自动化系统</b>。<br><br>
+      <b>核心思路：</b>1 台主机运行 OpenClaw Gateway（MCP Host，AI 大脑）。每台被控设备装一个<b>自建客户端</b>，客户端作为 MCP Server 暴露本机能力给 Gateway。不装客户端的设备不纳入控制范围。<br><br>
+      <b>使用方式：</b>通过任意通道（微信、飞书、Telegram、自建客户端）用自然语言告诉 AI 你要做什么——"看看服务器磁盘满了没"、"把手机照片传到电脑"、"重启游戏服务器"。AI 自动选择正确的设备和 MCP Tool 执行。<br><br>
+      <b>自建客户端</b>有两个功能：① 与 Gateway 沟通（聊天/远程桌面 UI）；② 暴露本机能力（MCP Server，让 AI 能操作这台设备）。
+    </p>
+  </div>
+
+  <h2>项目文档</h2>
+  <div class="nav-cards">
+    <a class="nav-card" href="architecture/index.html">
+      <div class="emoji">🏗️</div>
+      <h3>系统架构</h3>
+      <p>连接流程、实现细节、配置</p>
+    </a>
+    <a class="nav-card" href="capabilities/index.html">
+      <div class="emoji">🧩</div>
+      <h3>能力全景</h3>
+      <p>36 MCP Tools 定义</p>
+    </a>
+    <a class="nav-card" href="roadmap/index.html">
+      <div class="emoji">🗺️</div>
+      <h3>实施路线图</h3>
+      <p>5 阶段开发计划</p>
+    </a>
+    <a class="nav-card" href="security/index.html">
+      <div class="emoji">🔒</div>
+      <h3>安全分析</h3>
+      <p>风险矩阵与安全机制</p>
+    </a>
+    <a class="nav-card" href="maintenance/index.html">
+      <div class="emoji">🔧</div>
+      <h3>维护优化</h3>
+      <p>技术债务与可维护性</p>
+    </a>
+    <a class="nav-card" href="pm-review/index.html">
+      <div class="emoji">📋</div>
+      <h3>PM 审查</h3>
+      <p>范围、风险、验收标准</p>
+    </a>
+    <a class="nav-card" href="backlog/index.html">
+      <div class="emoji">✅</div>
+      <h3>开发代办</h3>
+      <p>55 个任务 · 6 个模块</p>
+    </a>
+    <a class="nav-card" href="flow/index.html">
+      <div class="emoji">🔄</div>
+      <h3>系统流程</h3>
+      <p>9 大核心流程完整走查</p>
+    </a>
+    <a class="nav-card" href="optimization/index.html">
+      <div class="emoji">📊</div>
+      <h3>信息优化方案</h3>
+      <p>跨文档问题汇总与行动计划</p>
+    </a>
+    <a class="nav-card" href="feasibility/index.html">
+      <div class="emoji">🔍</div>
+      <h3>可行性分析</h3>
+      <p>独立评估 · 文档矛盾 · 修订路线图</p>
+    </a>
+    <a class="nav-card" href="ai-strategy/index.html">
+      <div class="emoji">🧠</div>
+      <h3>AI 模型策略</h3>
+      <p>双方案：DeepSeek V4 + 视觉模型 / 多模态单模型</p>
+    </a>
+  </div>
+
+  <h2 style="margin-top:40px">核心设计</h2>
+  <div class="grid grid-3">
+    <div class="card">
+      <h4>🔀 任意 → 任意</h4>
+      <p>手机找电脑文件、电脑查服务器日志、微信开关游戏服务器。发起方可以是任意设备或任意聊天通道。</p>
+    </div>
+    <div class="card">
+      <h4>🔌 客户端接入</h4>
+      <p>所有被控设备装自建客户端（MCP Server + UI）。Gateway 统一调度所有客户端。</p>
+    </div>
+    <div class="card">
+      <h4>💬 AI 对话控制</h4>
+      <p>通过微信/飞书/Telegram 用自然语言控制设备。AI 自动选择正确的设备和命令。</p>
+    </div>
+    <div class="card">
+      <h4>🖥️ 自建客户端</h4>
+      <p>Android APK + Desktop (Tauri) + CLI。AI 对话 + 设备管理 + 远程桌面 UI。</p>
+    </div>
+    <div class="card">
+      <h4>🖱️ 远程桌面</h4>
+      <p>客户端截取本机屏幕，通过 WS 数据端口推流到请求方。鼠标键盘事件实时转发。</p>
+    </div>
+    <div class="card">
+      <h4>🌍 外网访问</h4>
+      <p>聊天通道（微信/飞书）不需要穿透 NAT。客户端直连用 Tailscale 或 DDNS-GO。</p>
+    </div>
+    <div class="card">
+      <h4>🧠 跨通道记忆</h4>
+      <p>identityLinks 统一身份，MEMORY.md 跨通道持久记忆。微信说的事飞书也知道。</p>
+    </div>
+    <div class="card">
+      <h4>🔄 双轨更新</h4>
+      <p>小更新 JS bundle OTA 静默推送（新增页面/修 Bug），大更新 APK 重装（原生模块变更）。</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Global Control Assistant &copy; 2026 &mdash; 基于 OpenClaw + MCP 构建
+</footer>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.5.0",
+  "name": "B0.5.0",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.5.0（测试版）· 2026-08-15\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.5.0** · agent+term **0.3.0** · server **0.5.0** · Android **0.3.0**\n\n### 变更（自 beta 系列，测试版里程碑）\n- **Android 原生化**（P0-P4）：Rust agent JNI 直启（20 工具，APK 5.6MB）、nodejs-mobile 退出、S1 设备 token/心跳/审计端到端、高低版本分支（API 24-36）、BOOT FGS 修复\n- **审批三通道**：Android App 审批卡片流（SSE 下发 + 弹窗指纹 + 手势）、飞书交互卡片（按钮回调 + 原地回写）、按 id 审批端点 + dashboard 面板审批；微信审批通道移除\n- **Windows 安装程序组件选择**（Desktop/Agent/Term 独立勾选，任意组合）\n- **安全审查两轮**（docs/review-report-2026-08-12.md + 2026-08-14.md）：S1 设备 token 隔离、SSRF/限速/审计、飞书故障容错、SSE 心跳、凭据加密存储等全量修复\n- mDNS 服务发现、审计集中推送、事件驱动设备状态（/events SSE + 面板四态）\n- 安全审查 44 项（beta.1）+ 审批审查 20 项（beta.3）全部修复\n\n### 交付物（B 通道命名）\n- **gca-setup-win-B0.5.0.exe** — Windows 安装程序（组件选择）\n- **gca-agent-android-B0.3.0.apk** — Android agent（Rust 原生）\n- **gca-server-0.5.0.zip** / **gca-server-linux-B0.5.0.deb** — 服务端\n\n### 已知限制\n- 真机（MIUI）：A11y 需设置界面手动开启；杀后台需省电白名单\n- Android 10+ 后台读剪贴板受限；remote_input key_type 需无障碍树支持\n- 手机 = Windows 认证器（USB/IP FIDO2）排期中（PoC）\n- keystore 密码副本在 %APPDATA%\\GCA Desktop\\keystore-pass.txt（勿删）"
+}

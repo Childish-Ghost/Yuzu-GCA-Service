@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCA 项目进度仪表盘 · 2026-08-14</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-blue:    #256abf;
+    --series-blue-l:  #cde2fb;
+    --status-good:    #0ca30c;
+    --status-good-bg: #e6f5e6;
+    --status-warn:    #b97e00;
+    --status-warn-bg: #fdf3d7;
+    --status-neutral: #898781;
+    --status-neutral-bg: #efeeeb;
+    --delta-good:     #006300;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.5;
+  }
+  .viz-root { max-width: 1080px; margin: 0 auto; padding: 28px 20px 48px; }
+
+  header.top { display: flex; align-items: flex-start; margin-bottom: 24px; }
+  h1 { font-size: 22px; font-weight: 650; letter-spacing: 0.2px; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+  /* ---- stat tiles ---- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 14px;
+  }
+  .stat .label { font-size: 12.5px; color: var(--text-secondary); }
+  .stat .value { font-size: 30px; font-weight: 700; margin-top: 6px; line-height: 1.15; }
+  .stat .delta { font-size: 12.5px; margin-top: 6px; color: var(--delta-good); font-weight: 600; }
+  .stat .delta.neutral { color: var(--text-muted); }
+
+  /* ---- section ---- */
+  section { margin-bottom: 30px; }
+  h2 { font-size: 16px; font-weight: 650; margin-bottom: 4px; }
+  .section-note { font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; }
+
+  /* ---- status chips ---- */
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 10px;
+    white-space: nowrap;
+  }
+  .chip.done  { color: var(--status-good);    background: var(--status-good-bg); }
+  .chip.next  { color: var(--status-warn);    background: var(--status-warn-bg); }
+  .chip.todo  { color: var(--status-neutral); background: var(--status-neutral-bg); }
+
+  /* ---- phase cards ---- */
+  .phases { display: grid; gap: 12px; }
+  .phase {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; display: grid; grid-template-columns: 220px 1fr 100px; gap: 18px; align-items: center;
+  }
+  .phase .pname { font-weight: 650; font-size: 14.5px; }
+  .phase .pscope { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+  .meter { height: 10px; background: var(--status-neutral-bg); border-radius: 999px; overflow: hidden; position: relative; }
+  .meter > .fill { height: 100%; background: var(--series-blue); border-radius: 999px; }
+  .meter-label { font-size: 12.5px; color: var(--text-secondary); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .phase .right { text-align: right; }
+
+  /* ---- batch board ---- */
+  .batches { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .batch {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; position: relative;
+  }
+  .batch .bname { font-size: 13px; font-weight: 650; margin-bottom: 6px; }
+  .batch .bdesc { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; min-height: 2.6em; }
+  .batch[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: 10px; bottom: calc(100% + 6px); z-index: 10;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; font-weight: 400; padding: 6px 10px; border-radius: 8px;
+    max-width: 260px; white-space: normal; line-height: 1.4; pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
+
+  /* ---- timeline ---- */
+  .timeline { border-left: 2px solid var(--gridline); margin-left: 8px; padding-left: 0; }
+  .tl-item { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 7px 0 7px 18px; position: relative; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -5px; top: 14px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--series-blue);
+  }
+  .tl-item.milestone::before { background: var(--status-good); width: 10px; height: 10px; left: -6px; top: 13px; }
+  .tl-time { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .tl-text { font-size: 13.5px; }
+  .tl-text b { font-weight: 650; }
+
+  /* ---- legend ---- */
+  .legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px; flex-wrap: wrap; }
+  .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+  /* ---- table view ---- */
+  .toggle-wrap { margin: 2px 0 12px; }
+  .toggle-wrap button {
+    font-size: 12.5px; border: 1px solid var(--border); background: transparent;
+    color: var(--text-secondary); border-radius: 8px; padding: 4px 10px; cursor: pointer;
+  }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface-1); border-radius: 10px; overflow: hidden; }
+  table.data th, table.data td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--gridline); }
+  table.data th { color: var(--text-secondary); font-weight: 600; font-size: 12.5px; }
+  table.data td { font-variant-numeric: tabular-nums; }
+  .hidden { display: none; }
+
+  footer { margin-top: 34px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--gridline); padding-top: 14px; }
+
+  @media (max-width: 640px) {
+    .phase { grid-template-columns: 1fr; gap: 8px; }
+    .phase .right { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="top">
+    <div>
+      <h1>GCA 项目进度仪表盘</h1>
+      <div class="subtitle">Global Control Assistant · 跨设备远程控制与 AI 自动化 · 数据截至 2026-08-14</div>
+    </div>
+
+  </header>
+
+  <!-- ================= stat tiles ================= -->
+  <div class="stats">
+    <div class="stat">
+      <div class="label">agent 工具</div>
+      <div class="value">20</div>
+      <div class="delta">Rust gca-agent（AI 通道，含审批）+ gca-term（人终端，免审批）+ App 审批三通道</div>
+    </div>
+    <div class="stat">
+      <div class="label">桌面端</div>
+      <div class="value">Rust egui</div>
+      <div class="delta">gca-desktop-rs：登录嗅探/本机模式/设备详情/真终端/托盘/自启</div>
+    </div>
+    <div class="stat">
+      <div class="label">终端能力</div>
+      <div class="value">真终端</div>
+      <div class="delta">ConPTY + SSE 流式 + vte 解析 + conhost 主机（sideload 可选：GCA_CONPTY_SIDELOAD=1）</div>
+    </div>
+    <div class="stat">
+      <div class="label">单元测试</div>
+      <div class="value">56</div>
+      <div class="delta">✓ cargo 56 全绿 + server 16（mdns/SSRF/审批）+ client 7（分类器）</div>
+    </div>
+    <div class="stat">
+      <div class="label">架构</div>
+      <div class="value">Rust 化</div>
+      <div class="delta">Cargo workspace（desktop-rs + agent）· 旧 Tauri/Node 归档保留</div>
+    </div>
+    <div class="stat">
+      <div class="label">待解卡点</div>
+      <div class="value">1</div>
+      <div class="delta neutral">全部修复已生效；事件驱动阶段一完成；待办：阶段二（Android/面板接入 /events）/ Android 原生化 / Win7 后置</div>
+    </div>
+    <div class="stat">
+      <div class="label">发布版本</div>
+      <div class="value">B0.5.0</div>
+      <div class="delta">✓ 2026-08-15：测试版（beta）——Android 原生化 + 审批三通道 + 组件选择安装程序 + 双轮安全审查全量修复 + 敏感信息清理；gitea 已发布（GitHub 双地址待 token）</div>
+    </div>
+  </div>
+
+  <!-- ================= phases ================= -->
+  <section>
+    <h2>阶段进度</h2>
+    <div class="section-note">Phase 0-3 全部交付 ✅；2026-08 Rust 化重构 + 真终端 + 稳定性/审查修复闭环；B0.3.0 已发布（安装程序 + 服务端包）</div>
+    <div class="legend">
+      <span class="key"><span class="dot" style="background:var(--status-good)"></span>✓ 已完成</span>
+      <span class="key"><span class="dot" style="background:var(--status-warn)"></span>▶ 下一批</span>
+      <span class="key"><span class="dot" style="background:var(--status-neutral)"></span>○ 未开始</span>
+      <span class="key"><span class="dot" style="background:var(--series-blue)"></span>完成度</span>
+    </div>
+    <div class="toggle-wrap"><button onclick="toggleTable()">📊 图表 / 表格视图切换</button></div>
+
+    <div class="phases" id="phaseCards">
+      <div class="phase">
+        <div><div class="pname">Phase 0-3 · 基础能力</div><div class="pscope">MCP 工具链 + 审批 + 多平台 + 远程桌面三件套（Node 时代）</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · 20 Tool 185 测试双平台全绿（已归档 archive/）</div></div>
+        <div class="right"><span class="chip done">✓ 已完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">Rust 化重构</div><div class="pscope">Cargo workspace：agent（22 工具，零依赖 std TCP）+ desktop-rs（egui 桌面端）</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · 双进程拆分（gca-agent 3001 + gca-term 3011）+ 托盘/自启/注册审批全链路</div></div>
+        <div class="right"><span class="chip done">✓ 已完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">真终端（C-1）</div><div class="pscope">portable-pty + vte + 自写缓冲/渲染（OpenConsole sideload，wt 同款）</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · ConPTY + SSE 流式 + 输入批量/resize 防抖 + CPR 应答 + 死会话重生</div></div>
+        <div class="right"><span class="chip done">✓ 已完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">终端稳定性（8/9-11）</div><div class="pscope">显示错位/输入回显/弹窗/审查安全四链路修复</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · DECSC/DECRC + conhost 主机 + SSE 带尺寸 + 审查修复（scroll_up/焦点门控/安全）——已验证生效</div></div>
+        <div class="right"><span class="chip done">✓ 已完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">发布 0.3.0</div><div class="pscope">Windows 安装程序（NSIS）+ 服务端包 + tag B0.3.0 推送</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · gca-setup-0.3.0.exe（UAC/组件勾选/自启/防火墙/卸载器）+ gca-server-0.3.0.zip + 36 项测试全绿</div></div>
+        <div class="right"><span class="chip done">✓ 已完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">事件驱动设备状态</div><div class="pscope">服务器集中探测 + /events SSE 广播（替代轮询）</div></div>
+        <div><div class="meter"><div class="fill" style="width:90%"></div></div><div class="meter-label">90% · server 侧 + desktop 订阅 + 四态显示完成（44 测试全绿，VM 已部署实测）；实机验证待重启桌面端</div></div>
+        <div class="right"><span class="chip done">✓ 阶段一完成</span></div>
+      </div>
+      <div class="phase">
+        <div><div class="pname">Android 原生化</div><div class="pscope">Rust NDK + JNI 桥接，nodejs-mobile 退出</div></div>
+        <div><div class="meter"><div class="fill" style="width:100%"></div></div><div class="meter-label">100% · P0-P4 完成（2026-08-13）；审批三通道 08-14 补齐</div></div>
+        <div class="right"><span class="chip done">● 完成</span></div>
+      </div>
+    </div>
+
+    <table class="data hidden" id="phaseTable">
+      <thead><tr><th>阶段</th><th>范围</th><th>完成度</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 0-3</td><td>MCP 工具链 + 审批 + 多平台</td><td>100%</td><td>✓ 已完成（Node 时代，已归档）</td></tr>
+        <tr><td>Rust 化重构</td><td>agent + desktop-rs + 双进程拆分</td><td>100%</td><td>✓ 已完成（2026-08-05~06）</td></tr>
+        <tr><td>真终端 C-1</td><td>ConPTY + SSE + vte + 自写渲染</td><td>100%</td><td>✓ 已完成</td></tr>
+        <tr><td>终端稳定性</td><td>显示错位/输入/弹窗/审查安全</td><td>100%</td><td>✓ 已完成（2026-08-11 验证）</td></tr>
+        <tr><td>发布 0.3.0</td><td>NSIS 安装程序 + 服务端 zip + tag</td><td>100%</td><td>✓ 已完成（2026-08-12）</td></tr>
+        <tr><td>事件驱动设备状态</td><td>集中探测 + /events SSE 广播</td><td>90%</td><td>✓ 阶段一完成（VM 部署实测；实机验证待重启桌面端）</td></tr>
+        <tr><td>Android 原生化</td><td>Rust NDK + JNI</td><td>100%</td><td>● P0-P4 完成（2026-08-13）；审批三通道（App/飞书/SSE）08-14</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= batches ================= -->
+  <section>
+    <h2>批次看板</h2>
+    <div class="section-note">Rust 时代批次（2026-08-11~12）· 悬停查看产出</div>
+    <div class="batches" id="batchGrid"></div>
+  </section>
+
+  <!-- ================= timeline ================= -->
+  <section>
+    <h2>关键事件时间线</h2>
+    <div class="section-note">POC 首连 → 三设备全通 → Rust 化 → 真终端 → B0.3.0 发布（2026-07-24 ~ 2026-08-12）</div>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-time">00:41</div><div class="tl-text">主模型切换 <b>MiniMax-M3</b>（claude-cli 方案弃用），清理陈旧插件配置</div></div>
+      <div class="tl-item"><div class="tl-time">00:47</div><div class="tl-text">飞书通道首条消息打通（官方 openclaw-lark 插件，WebSocket 长连接）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">00:51</div><div class="tl-text"><b>飞书→MiniMax-M3→sysinfo→真机数据→回包</b> 全链路首次贯通</div></div>
+      <div class="tl-item"><div class="tl-time">01:15</div><div class="tl-text"><b>POC 验收 Go</b>；抓到并修复 executor 反斜杠转义 bug（dir D:\ 失败根因）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">12:30</div><div class="tl-text"><b>审批确认闭环实测通过</b>：mkdir → 确认码 → 飞书回复"确认" → exec_confirm 执行 → 模型自动复核</div></div>
+      <div class="tl-item"><div class="tl-time">13:12</div><div class="tl-text"><b>Streamable HTTP 迁移完成</b>（途中排掉 MiniMax maxTokens 元数据丢失事故）</div></div>
+      <div class="tl-item"><div class="tl-time">13:40</div><div class="tl-text">启动自检 + 空闲会话 TTL 清扫（连接生命周期收官）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">14:05</div><div class="tl-text"><b>S-001/S-002 类型形式化完成 → Phase 1 全部交付</b></div></div>
+      <div class="tl-item"><div class="tl-time">14:20</div><div class="tl-text">整机重启后链路自愈（Gateway 自动回连），仅 POC Server 需人工拉起</div></div>
+      <div class="tl-item milestone"><div class="tl-time">15:10</div><div class="tl-text"><b>Phase 2 第 5 批开工</b>：新增 file_read / file_write / file_move / process_list（8 Tool 在线），exec_confirm 泛化为通用 confirm 工具；105 单元 + 17 E2E 全绿</div></div>
+      <div class="tl-item milestone"><div class="tl-time">16:20</div><div class="tl-text"><b>第 5 批 9/9 工具完成（13 Tool 在线）</b>：OTP 验证码机制上线（高危操作码弹本机屏幕、AI 不可见）；实测抓住模型试图 exec shutdown 绕过 OTP，分类器随即封死全部绕行路径；130 单元 + 19 E2E 全绿</div></div>
+      <div class="tl-item"><div class="tl-time">18:40</div><div class="tl-text">微信通道全链路打通（工具调用实测通过）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">20:40</div><div class="tl-text"><b>identityLinks 上线 → 第 5 批全部完成</b>：飞书/微信私聊共享 owner 会话，跨通道连续对话（途中排掉网关假死 + 6 次重启窗口丢消息）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">21:20</div><div class="tl-text"><b>第 6 批开发项完成 → Phase 2 代码面收官</b>：settings 存储 + DPAPI 凭据存储（零依赖 keychain）+ 代理管道；143 单元 + 19 E2E 全绿</div></div>
+      <div class="tl-item milestone"><div class="tl-time">22:00</div><div class="tl-text"><b>TOTP Authenticator 上线</b>：高危操作改动态码（零依赖 RFC 6238，密钥 DPAPI 存储，±2 窗+重放防护）；绕行实测：诱导模型跳 OTP 失败</div></div>
+      <div class="tl-item milestone"><div class="tl-time">23:20</div><div class="tl-text"><b>GAP-v2 审批协议定稿 + 配对 token 认证上线</b>：/mcp 全面 Bearer 认证（无 token 401）；协议=微软推送模式，飞书/微信即 App</div></div>
+      <div class="tl-item milestone"><div class="tl-time">23:45</div><div class="tl-text"><b>代码仓库启用</b>：git.childish-ghost.com 首提交 117 文件（剔除含明文密码的遗留脚本）；今后全部修改 commit+push</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-25 15:00</div><div class="tl-text"><b>GAP-v2 全链路上线并实测通过</b>：gap-relay 推送服务（VM systemd，202 异步投递）+ 推送 nonce 主路径 + 三级降级；实测 restart→双通道推送→回码 857→执行→abort 全程物证</div></div>
+      <div class="tl-item"><div class="tl-time">07-25 15:50</div><div class="tl-text"><b>P-005 CLI 平台化</b>：gca start/stop/status/doctor/logs/setup/service 全套命令；开机自启 Startup vbs 方案（免管理员）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-25 16:20</div><div class="tl-text"><b>P-002 Linux 适配完成 → 双设备上线</b>：Linux 测试 171/171 与 Windows 同绿；VM 实机注册 gca-vm 第二设备（systemd 常驻）；双设备 agent 实测：一次查询分调两台设备并对比数据</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-26 20:00</div><div class="tl-text"><b>第 8 批 R-001/R-002/R-003 全通——远程桌面三件套</b>：截屏（模型多模态可见屏幕）+ 操控（桌面打字）+ 剪贴板同步（设备间自动同步）；20 Tool 185 测试双平台全绿</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-26 21:00</div><div class="tl-text"><b>INT-001/002 产品化第一砖</b>：配对握手协议（gca pair 一键上线）+ npm 打包（gca-client bin 入口）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 00:00</div><div class="tl-text"><b>Phase 0-3 + 产品化全部完成 → 进入自用验证期</b>：图片剪贴板同步 + 短确认词固化 + INT-003 控制面 + R-004 选型 + docs 构建</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 13:00</div><div class="tl-text"><b>Android APK 首次在物理机启动成功</b>：libnode.so + JNI 桥 + gca-bundle.cjs（57K 行），Node.js v18.20.4 嵌入 Android，/health 端点响应</div></div>
+      <div class="tl-item"><div class="tl-time">07-27 14:00</div><div class="tl-text">Android 从手写 gca-server.js 升级为 POC 完整 bundle：9→12→20 Tool 注册，7 个 isAndroid 守卫</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 15:00</div><div class="tl-text"><b>SIGTRAP 双启崩溃修复</b>：V8 InitializeOncePerProcess 不能调两次，synchronized 守卫 + BOOT_COMPLETED 自启通</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 15:10</div><div class="tl-text"><b>Android MCP 全链路验证通过</b>：飞书→Gateway→Android→sysinfo/exec→回包，arm64 15GB RAM 真机数据，20 Tool 全部 probe 成功</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 15:30</div><div class="tl-text"><b>三设备全在线 + 全线文档更新</b>：README + roadmap + backlog + POC-SUMMARY + SPEC + feishu 配置 + 仪表盘</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 16:00</div><div class="tl-text"><b>INT-003 gca-server 控制面部署</b>：配对中心 + 设备管理 + 审批推送 + 审计集中，systemd 常驻，4 设备在线</div></div>
+      <div class="tl-item"><div class="tl-time">07-27 16:20</div><div class="tl-text">Android screenshot v1: screencap 命令被 SELinux 拦截（预期内），确认需要 MediaProjection API</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-27 16:40</div><div class="tl-text"><b>Android MediaProjection 截屏</b>：Kotlin ScreenCaptureActivity + 文件桥接（Node.js ↔ Kotlin），isAndroid 守卫移除</div></div>
+      <div class="tl-item"><div class="tl-time">07-28 00:00</div><div class="tl-text"><b>高危操作授权流设计</b>：数字确认码 → server 确认 → 下发执行，未注册设备仅 2 tool</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-28 23:30</div><div class="tl-text"><b>Tauri 桌面端 HTTP 代理方案确定</b>：Rust reqwest + #[tauri::command] + invoke IPC，绕过 webview CORS/mixed-content 限制</div></div>
+      <div class="tl-item milestone"><div class="tl-time">07-29 00:00</div><div class="tl-text"><b>Tauri 桌面端设备仪表盘可用</b>：深色主题，设备卡片（在线/离线状态+工具数），设置/日志页签，系统托盘常驻</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-05</div><div class="tl-text"><b>Rust 化重构完成</b>：Cargo workspace（desktop-rs 0.3.0 + gca-agent 0.1.0），agent 22 工具（20 对齐 node + 审批 + term），桌面端登录嗅探/本机模式/设备详情</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-06</div><div class="tl-text"><b>双进程拆分部署验证</b>：gca-agent（AI 通道 3001）+ gca-term（人终端 3011，会话化免审批）；VM gca-server 代理链路全通；注册流程端到端</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-08</div><div class="tl-text"><b>真终端上线</b>：ConPTY + SSE 流式 + vte 解析 + 自写网格渲染；OpenConsole sideload（wt 同款）；PSReadLine 恢复；输入链路修复（bInheritHandles=0）</div></div>
+      <div class="tl-item"><div class="tl-time">08-09</div><div class="tl-text"><b>输入/渲染/重连三链路加固</b>：输入串行化+seq 重试（防丢字符/重复）、SSE 重连 2s 退避（防帧级轰炸）、共享 reqwest client、空闲重绘 100ms 节流、死代码清理（exec 命令框遗骸）</div></div>
+      <div class="tl-item"><div class="tl-time">08-09</div><div class="tl-text"><b>0xc0000142 弹窗加固</b>：SetErrorMode 抑制 loader 弹窗（错误模式继承子进程）+ Session.alive 死会话自动重生；Tobii 崩溃循环为环境嫌疑（A/B 实验待做）</div></div>
+      <div class="tl-item"><div class="tl-time">08-09</div><div class="tl-text"><b>托盘退出 = 全套退出</b>：kill_local_services（用户明确要求——agent/term 无 UI 不可管理，退出桌面端即不再使用）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-10</div><div class="tl-text"><b>终端显示错位根因定位</b>（隔离实例 3012 字节级验证）：渲染跳中间空行（拼接）→ resize 不补发（ConPTY 100x30）→ <b>会话 100x30 启动后 resize → shell 行号偏移</b>（PSReadLine 回显 \x1b[22;25H 超界）→ SSE 连接 query 带尺寸 + gca-server 代理 %3F 转义修复（已部署 VM）+ LAST_SIZE 切 shell 沿用尺寸</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-12</div><div class="tl-text"><b>B0.3.0 发布</b>：Windows 安装程序 gca-setup-0.3.0.exe（NSIS，UAC/组件勾选/自启/防火墙 netsh/卸载器）+ 服务端 gca-server-0.3.0.zip；36 项测试全绿，tag B0.3.0 已推送（自 B0.2.0 共 129 commits）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-12</div><div class="tl-text"><b>事件驱动设备状态阶段一完成</b>：server 集中探测 + /events SSE（9 单测）+ desktop 订阅 + 四态显示（8 单测）——44 测试全绿，VM 已部署实测（gca-win11 双在线 + Android 仅 Agent），断线回退/重连实机验证通过；死代码清理（exec.rs -270 行，0 警告）；阶段二（Android/面板接入）待办</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-13</div><div class="tl-text"><b>Android 原生化完成（P0-P4）</b>：Rust agent JNI 直启（20 工具，APK 164MB→5.6MB）、S1 设备 token/心跳/审计端到端、高低版本分支（API 24/36）、BOOT FGS 修复；B0.4.0-beta.1/2 发布（Windows + 服务端 + Android APK）</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-14</div><div class="tl-text"><b>审批三通道落地</b>：App 审批卡片流（SSE 下发 + 弹窗指纹 + 上滑切换/左同意/右拒绝）、飞书交互卡片（按钮回调 + 原地回写）、按 id 审批端点、微信审批通道移除；真实设备注册审批端到端验证</div></div>
+      <div class="tl-item milestone"><div class="tl-time">08-15</div><div class="tl-text"><b>B0.5.0 测试版发布</b>：Android 原生化 + 审批三通道 + 组件选择安装程序 + 双轮审查全量修复 + 敏感信息清理；组件 0.5.0/0.3.0；双地址发布（gitea ✓ / GitHub 待 token）</div></div>
+      <div class="tl-item"><div class="tl-time">08-12</div><div class="tl-text"><b>MASTER 待办更新</b>：主线下一步定为事件驱动设备状态（服务器集中探测 + /events SSE 广播替代轮询）；Win7 浏览器终端归入适配计划后置（docs/win7-plan.md 路径 A）</div></div>
+    </div>
+  </section>
+
+  <!-- ================= next plan ================= -->
+  <section>
+    <h2>下一步计划</h2>
+    <div class="section-note">2026-08-12 · B0.3.0 发布 + 事件驱动阶段一完成 · 下一步：阶段二其他客户端接入</div>
+    <div class="batches">
+      <div class="batch" data-tip="阶段一（Windows+server 主链路）已完成：server 集中探测 + /events SSE + desktop 订阅 + 四态显示（44 测试全绿，VM 部署实测）；阶段二：Android（node bundle fetch 流式读 /events，无 term 灰显示）与面板（设备行在线列 + SSE 订阅）接入">
+        <div class="bname">① 事件驱动 · 阶段二</div>
+        <div class="bdesc">Android + 面板接入 /events（阶段一已完成）</div>
+        <span class="chip next">▶ 下一步</span>
+      </div>
+      <div class="batch" data-tip="tobii-aby-test.cmd off 停 Tobii 服务 1-2 天，观察 0xc0000142 弹窗是否消失——唯一干净判据（off/on 可逆）。AppInit_DLLs 已确认关闭、Defender 无拦截，Tobii 仅是嫌疑">
+        <div class="bname">② Tobii A/B 实验</div>
+        <div class="bdesc">判定弹窗是否 Tobii 引起（可选，不影响使用）</div>
+        <span class="chip next">▶ 待做</span>
+      </div>
+      <div class="batch" data-tip="大工程：Rust NDK + JNI 桥接，nodejs-mobile 退出。Android 端现仍用 node bundle（13/20 tool + 7 个 isAndroid 守卫）">
+        <div class="bname">③ Android 原生化</div>
+        <div class="bdesc">Rust NDK + JNI（P1 大工程，未开工）</div>
+        <span class="chip todo">○ 未开始</span>
+      </div>
+      <div class="batch" data-tip="docs/win7-plan.md 路径 A：控制面板加终端页——Win7 浏览器零安装（desktop-rs 的 winit 要求 Win10 无法打包）；被控端受 ConPTY 硬墙限制（2026-08-11 归入适配计划后置）">
+        <div class="bname">④ Win7 适配</div>
+        <div class="bdesc">浏览器终端（适配计划·后置）</div>
+        <span class="chip todo">○ 后置</span>
+      </div>
+      <div class="batch" data-tip="INT-004 mDNS 服务发现（P2）· INT-005 审计日志集中（P2）· 若 LAST_SIZE 验证后仍有个别错位：TermScreen CUP 超界滚动（vte 侧防御）">
+        <div class="bname">⑤ 待办池</div>
+        <div class="bdesc">mDNS 发现 / 审计集中 / CUP 滚动防御</div>
+        <span class="chip todo">○ 未开始</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    数据来源：GCA-MASTER.md（唯一入口）· docs/project-status.md（跨会话恢复锚点）· cargo test --workspace（36 项全绿）<br>
+    配色：单色相进度 + 固定状态色（CVD 安全，状态均带图标+文字标签） · 固定白色主题
+  </footer>
+</div>
+
+<script>
+  // ---- batch board data ----
+  const batches = [
+    { n: 'R1', phase: 'Rust 化', desc: 'agent 22 工具 + desktop-rs + 双进程拆分', status: 'done', tip: '2026-08-05~06：Cargo workspace；gca-agent（AI 通道 3001）+ gca-term（人终端 3011）；VM 代理链路全通' },
+    { n: 'R2', phase: '真终端', desc: 'ConPTY + SSE + vte + 自写渲染', status: 'done', tip: '2026-08-08 上线：OpenConsole sideload、PSReadLine 恢复、输入链路修复（bInheritHandles=0）' },
+    { n: 'R3', phase: '终端稳定性', desc: '显示错位/输入/弹窗三链路', status: 'done', tip: '2026-08-09~11：DECSC/DECRC、conhost 主机（GCA_CONPTY_SIDELOAD=1 切 sideload）、SSE 带尺寸+LAST_SIZE、输入串行化+seq、CPR 双应答删除、0xc0000142 弹窗抑制+死会话重生' },
+    { n: 'R4', phase: '审查安全', desc: '全项目三模块并行审查修复', status: 'done', tip: '2026-08-11：19 项修复——server JSON 崩溃 DoS/SSE 断开崩溃/面板 XSS/reurl SSRF/ops 清理；agent file_read panic/curl-wget 审批绕过/票据伪造/service 注入/1MB 截断；desktop scroll_up 丢行/焦点门控/gen 过滤' },
+    { n: 'R5', phase: '运维增强', desc: '心跳/uptime/探测/退出清理', status: 'done', tip: '2026-08-11：IP 心跳（DHCP 防离线）、uptime 本地每秒跳动、探测超时 2-3s、托盘退出=全套退出、1s repaint 驱动定时刷新' },
+    { n: 'R6', phase: '归档文档', desc: '目录归档 + 总纲统一', status: 'done', tip: '2026-08-11：desktop/docs 历史归档、scripts 分组、GCA-MASTER.md 唯一入口 + session-recovery.md 恢复指南、4 commit 提交' },
+    { n: 'R7', phase: '发布 0.3.0', desc: 'Windows 安装程序 + 服务端包 + tag', status: 'done', tip: '2026-08-12：NSIS 编译 gca-setup-0.3.0.exe（UAC/组件勾选/自启 HKCU/防火墙 netsh/卸载器）——仓库 cmd 脚本写死仓库路径不入包；gca-server-0.3.0.zip（dist 36 文件）；tag B0.3.0 已推送' },
+    { n: 'R8', phase: '事件驱动设备状态', desc: '集中探测 + /events SSE 广播', status: 'done', tip: '2026-08-12 完成（docs/event-driven-plan.md）：server events.ts（状态表/探测/防抖/广播，9 单测）+ /events 端点 + desktop subscribe_events/apply_event/四态显示（8 单测）+ 指数退避重连/轮询回退；44 测试全绿，VM 已部署实测（gca-win11 双在线 + Android 仅 Agent）；实机验证待重启桌面端' },
+    { n: 'R9', phase: 'Android 原生化', desc: 'Rust NDK + JNI（P1 大工程）', status: 'todo', tip: 'nodejs-mobile 退出；Android 端现 13/20 工具（7 个 isAndroid 守卫需 Kotlin 桥）' },
+    { n: 'R10', phase: 'Win7 适配', desc: '浏览器终端（适配计划·后置）', status: 'todo', tip: 'docs/win7-plan.md 路径 A：控制面板加终端页（Win7 浏览器零安装）；被控端受 ConPTY 硬墙限制（2026-08-11 归入适配计划后置）' },
+  ];
+  const statusChip = {
+    done: '<span class="chip done">✓ 已完成</span>',
+    next: '<span class="chip next">▶ 下一批</span>',
+    todo: '<span class="chip todo">○ 未开始</span>',
+  };
+  document.getElementById('batchGrid').innerHTML = batches.map(b => `
+    <div class="batch" data-tip="${b.tip}">
+      <div class="bname">${b.n} · ${b.phase}</div>
+      <div class="bdesc">${b.desc}</div>
+      ${b.chip ? '<span class="chip ' + b.status + '">' + b.chip + '</span>' : statusChip[b.status]}
+    </div>
+  `).join('');
+
+  // ---- chart / table toggle ----
+  function toggleTable() {
+    document.getElementById('phaseCards').classList.toggle('hidden');
+    document.getElementById('phaseTable').classList.toggle('hidden');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目经理审查 — Global Control Assistant</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html">首页</a><span class="sep">/</span>
+  <a href="../architecture/index.html">架构</a><span class="sep">/</span>
+  <span class="current">PM 审查</span>
+</div>
+
+<div class="container">
+  <h1>项目经理审查报告</h1>
+  <p class="subtitle">从项目管理角度审视风险、范围、进度和资源</p>
+
+  <div class="section">
+    <h2><span class="dot" style="background:var(--orange)"></span> 总体评估</h2>
+    <div class="card" style="border-color:rgba(245,158,11,.3)">
+      <p style="font-size:.95rem;line-height:1.8;color:var(--text)">
+        <b>结论：范围过大，需要砍阶段。</b><br><br>
+        当前设计覆盖了 10 大类能力、4 个客户端平台、外网穿透、远程桌面、AI 操控——对一个<b>个人开发者</b>来说是 2-3 年的工作量。<br><br>
+        <b>建议：</b>Phase 1 严格控制范围，只做"通过聊天通道控制一台设备"。其他全部推后。先跑通核心链路。
+      </p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span class="dot" style="background:var(--red)"></span> 关键问题</h2>
+    <div class="issue-grid">
+      <div class="issue">
+        <h4><span class="tag t-red">P0</span> 范围过大</h4>
+        <p>36 MCP Tool × 4 平台 × 外网穿透 × 远程桌面 × AI 操控 = 不可能在 28 周内完成。</p>
+        <div class="fix"><strong>建议：</strong>Phase 1 只做 10 个 Tool + 聊天通道控制。远程桌面、AI 操控、Android 客户端全部推到 Phase 2+。</div>
+      </div>
+      <div class="issue">
+        <h4><span class="tag t-red">P0</span> 没有用户验证</h4>
+        <p>设计了大量功能但没有验证用户是否需要。</p>
+        <div class="fix"><strong>建议：</strong>Phase 1 交付后自己用 2 周，记录哪些功能真正用到。根据实际使用调整优先级。</div>
+      </div>
+      <div class="issue">
+        <h4><span class="tag t-red">P0</span> 外部依赖风险</h4>
+        <p>OpenClaw 是核心依赖，MCP 支持可能变更、API 可能不稳定。</p>
+        <div class="fix"><strong>建议：</strong>① 锁定 OpenClaw 版本；② 所有交互封装在适配层；③ 关注 CHANGELOG。</div>
+      </div>
+      <div class="issue">
+        <h4><span class="tag t-orange">P1</span> 跨平台是最大技术风险</h4>
+        <p>四个平台的屏幕捕获、输入模拟、UI 自动化都不同。</p>
+        <div class="fix"><strong>建议：</strong>Phase 1 只做 Windows。验证核心链路通了再扩平台。</div>
+      </div>
+      <div class="issue">
+        <h4><span class="tag t-orange">P1</span> 没有里程碑和验收标准</h4>
+        <p>路线图有阶段划分，但没有明确的"完成"定义。</p>
+        <div class="fix"><strong>建议：</strong>每个 Phase 定义 3 个验收测试用例，全部通过才算完成。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span class="dot" style="background:var(--green)"></span> 各阶段验收标准</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>阶段</th><th>验收用例</th><th>完成定义</th></tr>
+        <tr><td><b>Phase 1</b></td><td>① Telegram 发 "列出电脑文件" → 收到列表<br>② Telegram 发 "执行 dir" → 收到结果<br>③ 客户端重启后自动重连</td><td>3 个用例全部通过</td></tr>
+        <tr><td><b>Phase 2</b></td><td>① Android 客户端看到 2+ 设备在线<br>② 手机找电脑文件成功<br>③ 跨设备远程桌面连接成功</td><td>3 个用例全部通过</td></tr>
+        <tr><td><b>Phase 3</b></td><td>① 远程桌面操控流畅（&lt;300ms）<br>② AI 自动打开记事本输入文字<br>③ 跨设备文件传输成功</td><td>3 个用例全部通过</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span class="dot" style="background:var(--accent)"></span> 建议的最小 MVP（2 周）</h2>
+    <div class="highlight">
+      <h4>砍到不能再砍</h4>
+      <p>
+        <b>只做一件事：</b>通过 Telegram 用自然语言在一台 Windows 电脑上执行命令并返回结果。<br><br>
+        <b>技术栈：</b>OpenClaw Gateway + 客户端 MCP Server（只实现 exec 和 file_list 两个 Tool）<br>
+        <b>验证方式：</b>Telegram 发 "dir C:\Users" → 收到目录列表<br>
+        <b>不做的：</b>远程桌面、Android 客户端、AI 操控、外网访问、多设备
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="../index.html">首页</a> &nbsp;|&nbsp; <a href="../architecture/index.html">架构</a> &nbsp;|&nbsp; <a href="../optimization/index.html">优化方案</a>
+  <br><br>
+  Global Control Assistant &copy; 2026
+</footer>
+</body>
+</html>

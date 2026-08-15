@@ -1,0 +1,30 @@
+{
+  "name": "gca-server",
+  "version": "0.5.0",
+  "description": "GCA Control Plane — pairing center, device management, ops authorization, audit",
+  "type": "module",
+  "main": "dist/gca-server.js",
+  "bin": {
+    "gca-server": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/gca-server.js",
+    "dev": "tsx src/gca-server.ts"
+  },
+  "files": [
+    "dist/**/*.js"
+  ],
+  "keywords": [
+    "gca",
+    "mcp",
+    "control-plane",
+    "pairing",
+    "device-management"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

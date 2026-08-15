@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.4.0-beta.3",
+  "name": "B0.4.0-beta.3",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.4.0-beta.3（测试版）· 2026-08-14\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.4.0** · agent+term **0.2.0** · server **0.4.0** · Android **0.2.0**\n\n### 变更（相对 beta.2）\n- **Windows 安装程序组件选择**：Desktop（控制端，必选）+ Agent（AI 通道）+ Term（人终端）独立勾选安装，任意组合（纯控制端=只选 Desktop）——原为三组件捆绑必装\n- **审批功能收尾审查修复（docs/review-report-2026-08-14.md，双 agent 审查 6 高 + 14 中低全修）**：\n  - server：飞书网络失败不再炸进程、open mode 下 card-action 禁用、SSE 断开崩溃修复、拒绝补审计、dashboard 审批列表实时刷新、过期 op 语义修正、opId 熵提升\n  - Android：卡片流删除按 id（防错删/崩溃）、SSE 心跳+超时重连、Android 7 通知崩溃修复、右滑拒绝二次确认、稳定页索引防连滑错决策\n- 审批三通道（beta.2 后新增）：App 审批卡片流（SSE 下发+弹窗指纹+手势）、飞书交互卡片（按钮回调+原地回写）、按 id 审批端点；微信审批通道移除\n- server zip/deb 已按审查修复后 dist 重打\n\n### 交付物\n- **gca-setup-win-B0.4.0-beta.1.exe** — Windows 安装程序（**组件选择版**）\n- **gca-agent-android-B0.2.0.apk** — Android agent（Rust 原生）\n- **gca-server-0.4.0.zip** / **gca-server-linux-B0.4.0.deb** — 服务端（审查修复版）\n\n### 已知限制\n- 真机（MIUI）：A11y 需设置界面手动开启；杀后台需省电白名单\n- Android 10+ 后台读剪贴板受限；remote_input key_type 需无障碍树支持\n- 手机 = Windows 认证器（USB/IP FIDO2）排期中（PoC）"
+}

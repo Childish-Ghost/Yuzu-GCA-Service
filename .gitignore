@@ -1,0 +1,39 @@
+# 敏感与本地环境（绝不入库）
+TestServer/
+poc/settings.json
+poc/logs/
+.claude/
+config.json
+
+# 依赖与构建产物
+node_modules/
+poc/node_modules/
+poc/dist/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/node_modules/
+# 归档旧 Tauri 桌面端打包的大二进制（node.exe 85MB×2），不入库
+archive/desktop-tauri/src-tauri/resources/node.exe
+archive/src-tauri/resources/node.exe
+
+# 临时文件
+*.tmp.*
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+android/local.properties
+android/gca-release.jks
+android/.gradle/
+android/app/build/
+android/build/
+# jniLibs 自 Android 原生化 P0 起放 Rust libgca_agent.so（cargo 构建产物，入库可开箱即用——
+# 与 gca-bundle.cjs 先例一致；nodejs-mobile 壳已于 P1 移除，libnode.so 规则不再需要）
+android/app/.cxx/
+android/.idea/
+
+# Rust 构建产物（workspace 根 target/ + 子 crate target/）
+target/
+
+# 发布打包产物
+releases/

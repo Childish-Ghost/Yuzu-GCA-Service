@@ -1,0 +1,7 @@
+{
+  "tag_name": "B0.4.0-beta.1",
+  "name": "B0.4.0-beta.1",
+  "prerelease": true,
+  "draft": false,
+  "body": "## B0.4.0-beta.1（测试版）· 2026-08-13\n\n### 组件矩阵（真值，命名规范见 docs/versioning.md）\n- desktop-rs **0.4.0** · agent+term **0.2.0** · server **0.4.0**（Android 包本次不出：原生化排期中，旧 APK 抛弃）\n- 安装包内 components.json 同此矩阵\n\n### 变更\n- **安全审查修复（44 项，docs/review-report-2026-08-12.md）**：\n  - **S1 设备 token 隔离（CRITICAL）**：配对不再下发 owner token，设备自铸 token 认证贯穿全链路（/device/me、retoken、constant-time 比对、限速）\n  - SSRF 重写（IPv4-mapped/保留段拒绝）、systemd token 泄露修复、确认码烧毁+脱敏、mdns 畸形包防护、终端输入日志脱敏、stdout/stderr/file_read 1MB 截断、票据 RNG 降级熵源\n  - 分类器收紧（curl/wget/node/python 移出只读白名单）、票据本机 host 校验、D4 确认协议对齐 rust↔node\n- **INT-004 mDNS 服务发现**：server 发布 `_gca-server._tcp.local.` + desktop QU 单播发现，端口扫描回退\n- **INT-005 审计集中推送**：`GCA_AUDIT_PUSH=1` 开关（默认本地），四类事件挂钩（approval_granted/exec/exec_blocked/file_fetch）\n- 事件驱动阶段二：面板接入 /events（四态状态列、○/● 指示、在线计数）\n- 测试：cargo 56 项全绿（+7）+ client 7 + server 16（mdns 畸形包/SSRF 矩阵）\n\n### 交付物（新命名规范首个应用版本）\n- **gca-setup-win-B0.4.0-beta.1.exe** — Windows 安装程序（Desktop 0.4.0 + Agent 0.2.0 + Term 0.2.0）\n- **gca-server-0.4.0.zip** — 服务端（server 组件号，dist + package.json）\n- **gca-server-linux-B0.4.0.deb** — 服务端 deb（VM 构建）\n\n### 已知限制\n- Android APK 不随本版发布（nodejs-mobile 版带已知 C1/S1 遗留，等待原生化重写；gca-bundle.cjs 已按最新源码重打）\n- deb 为 build-deb.sh 路径修复后的首次打包，装机验证待后续\n- 0xc0000142 弹窗：已抑制+自愈，Tobii 为嫌疑（A/B 实验可选）"
+}
